@@ -17,6 +17,7 @@ fn boot_app() -> App {
         program,
         1024,
         10_000,
+        vasm::encoding::Encoding::Utf8,
     );
     // M4 起 boot 后默认 Paused 在入口；显式跑到终态以测试 M3 期待的终态显示。
     app.run_continue();
@@ -37,6 +38,7 @@ fn boot_app_paused() -> App {
         program,
         1024,
         10_000,
+        vasm::encoding::Encoding::Utf8,
     )
 }
 
@@ -127,11 +129,12 @@ fn source_pane_marks_hlt_line() {
 }
 
 #[test]
-fn console_pane_shows_placeholder_until_m5() {
+fn console_pane_shows_cursor_when_idle() {
+    // 无输出无回显时，Console 仍渲染一个 █ 光标（终端外观）。
     let app = boot_app();
     let s = render_to_buffer(&app, 140, 35);
     assert!(s.contains("Console"), "console 标题: {s}");
-    assert!(s.contains("no output"), "M3 console 应显示占位: {s}");
+    assert!(s.contains("█"), "console 应有 █ 光标: {s}");
 }
 
 #[test]
@@ -281,6 +284,7 @@ fn call_stack_grows_after_call() {
         program,
         1024,
         10_000,
+        vasm::encoding::Encoding::Utf8,
     );
     // step 直到 call 之后
     for _ in 0..5 {
@@ -307,6 +311,7 @@ fn halted_pc_points_to_hlt_not_following_instr() {
         program,
         1024,
         100,
+        vasm::encoding::Encoding::Utf8,
     );
     app.run_continue();
     assert!(matches!(app.status(), RunStatus::Halted));
@@ -316,4 +321,172 @@ fn halted_pc_points_to_hlt_not_following_instr() {
         line_text.contains("hlt"),
         "halted 后 ▶ 应指 hlt 行，实际指向 L{hi}: {line_text:?}"
     );
+}
+
+// ---- M5：Console / status / explain ----
+
+fn boot_with_src(src: &str, encoding: vasm::encoding::Encoding) -> App {
+    let (program, diags) = parser::parse(src);
+    assert!(diags.is_empty(), "{diags:?}");
+    App::boot(
+        PathBuf::from("tests/m5.asm"),
+        src.to_string(),
+        program,
+        1024,
+        100_000,
+        encoding,
+    )
+}
+
+#[test]
+fn console_pane_renders_dos_output_after_int21() {
+    let src = "data segment\n  msg db 'HI$'\ndata ends\n\
+         code segment\n  assume cs:code, ds:data\nstart:\n  \
+         mov ax, data\n  mov ds, ax\n  mov dx, offset msg\n  mov ah, 9\n  int 21h\n  \
+         mov ah, 4ch\n  int 21h\ncode ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    app.run_continue();
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("HI"), "console 应包含 DOS 输出: {s}");
+}
+
+#[test]
+fn console_pane_decodes_gbk_output() {
+    // 渲染 ratatui TestBackend 时宽字符（中文）会占多列、跨 cell，断言比较脆弱。
+    // 直接验证编码层：vm.console.output 是 GBK 字节流，经 app.encoding 解码后包含 "你好"。
+    let src = "code segment\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Gbk);
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_output_bytes(&[0xC4, 0xE3, 0xBA, 0xC3]); // "你好"
+    }
+    let decoded = app.encoding().decode(app.vm().unwrap().console.output());
+    assert!(decoded.contains("你好"), "GBK 解码: {decoded:?}");
+}
+
+#[test]
+fn status_shows_waiting_input_when_dos_blocks() {
+    let src = "code segment\nstart:\n  mov ah, 1\n  int 21h\n  hlt\ncode ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    // 跑到 int 21h ah=1，缓冲为空 → WaitingForInput
+    app.run_continue();
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("waiting"), "状态栏应提示 waiting: {s}");
+    assert!(
+        s.contains("> "),
+        "console echo prompt 应可见（waiting 时变黄）: {s}"
+    );
+}
+
+#[test]
+fn status_shows_int_counter() {
+    let src = "code segment\nstart:\n  mov dl, '!'\n  mov ah, 2\n  int 21h\n  mov ah, 4ch\n  int 21h\ncode ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    app.run_continue();
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("#int=2"), "状态栏应显示 #int=2: {s}");
+}
+
+#[test]
+fn explain_pane_annotates_int_21h_ah_9() {
+    let src = "data segment\n  m db 'X$'\ndata ends\n\
+         code segment\n  assume cs:code, ds:data\nstart:\n  \
+         mov ax, data\n  mov ds, ax\n  mov dx, offset m\n  mov ah, 9\n  int 21h\n  \
+         mov ah, 4ch\n  int 21h\ncode ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    // step 4 次：mov ax,data / mov ds,ax / mov dx,offset m / mov ah,9。下一条就是 int 21h。
+    for _ in 0..4 {
+        app.step_once();
+    }
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("DOS 09h"), "explain 应注解 DOS 09h: {s}");
+}
+
+#[test]
+fn console_pane_renders_edit_echo() {
+    // 用户按键 → keymap 推字节到 vm.console.input + push_echo 推显示字符。
+    // 测试里直接 push 字节 + push_echo 模拟。
+    let src = "code segment\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    if let Some(vm) = app.vm_mut() {
+        for b in b"abc" {
+            vm.console.push_input(*b);
+        }
+    }
+    app.push_echo('a', 1);
+    app.push_echo('b', 1);
+    app.push_echo('c', 1);
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("abc"), "回显字符 abc 应可见: {s}");
+}
+
+#[test]
+fn echo_auto_drops_when_program_consumes_input() {
+    // 用户敲 'x'：input 队 = [x]，echo = [(x, 1)]。
+    // 程序 pop 一个字节后调 sync_echo → echo 应清空。
+    let src = "code segment\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_input(b'x');
+    }
+    app.push_echo('x', 1);
+    assert_eq!(app.console_echo().len(), 1);
+
+    // 模拟程序消费
+    if let Some(vm) = app.vm_mut() {
+        assert_eq!(vm.console.pop_input(), Some(b'x'));
+    }
+    app.sync_echo();
+    assert!(app.console_echo().is_empty(), "echo 应在消费后自动清空");
+}
+
+#[test]
+fn echo_partial_drop_keeps_unconsumed_chars() {
+    // 用户敲 'a' 'b'：echo = [(a,1), (b,1)]，input = [a, b]。
+    // 程序消费 'a' → echo 头部 'a' 弹掉，剩 [(b,1)]。
+    let src = "code segment\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_input(b'a');
+        vm.console.push_input(b'b');
+    }
+    app.push_echo('a', 1);
+    app.push_echo('b', 1);
+    if let Some(vm) = app.vm_mut() {
+        vm.console.pop_input();
+    }
+    app.sync_echo();
+    assert_eq!(app.console_echo().len(), 1);
+    assert_eq!(app.console_echo()[0].display, "b");
+}
+
+#[test]
+fn console_pane_shows_output_then_echo() {
+    // output 在前（程序写入），echo 在后（用户敲入），两者顺序可见。
+    let src = "code segment\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_output_bytes(b"OK");
+        vm.console.push_input(b'?');
+        vm.console.push_input(b'?');
+    }
+    app.push_echo('?', 1);
+    app.push_echo('?', 1);
+    let s = render_to_buffer(&app, 140, 35);
+    let ok_pos = s.find("OK").expect("OK in console");
+    let q_pos = s.find("??").expect("?? in console");
+    assert!(ok_pos < q_pos, "OK 应在 ?? 之前: {s}");
+}
+
+#[test]
+fn console_pane_handles_output_crlf_and_backspace() {
+    // 输出 "AB\r\nC\x08X" 应该渲染为两行：第一行 "AB"，第二行 "X"（\b 不擦字符，C 被覆盖）。
+    let src = "code segment\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_output_bytes(b"AB\r\nC\x08X");
+    }
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("AB"), "第一行 AB: {s}");
+    // 第二行：C 被 \b X 覆盖成 X
+    assert!(s.contains("X"), "第二行 X 可见: {s}");
 }

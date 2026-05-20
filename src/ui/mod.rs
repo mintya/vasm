@@ -65,8 +65,8 @@ pub fn render(frame: &mut Frame, app: &App) {
     let right = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(6), // Registers
-            Constraint::Length(4), // Segments
+            Constraint::Length(6), // Registers (含 8 位别名行)
+            Constraint::Length(6), // Segments (cs/ds/ss/es 各一行)
             Constraint::Length(3), // Flags
             Constraint::Min(4),    // Stack
         ])

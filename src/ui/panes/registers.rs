@@ -1,14 +1,24 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Style};
-use ratatui::text::Line;
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
 use crate::app::{App, FocusPane};
 
+/// Registers pane 排版：
+///
+/// ```text
+/// General   ax=0006  bx=0006  cx=0000  dx=0000
+///           ah=00 al=06   bh=00 bl=06   ch=00 cl=00   dh=00 dl=00
+/// Index     si=000A  di=0000  bp=0000  sp=0040
+/// Pointer   ip=0023
+/// ```
+///
+/// 标签灰色、寄存器名暗色、值高亮——三档色阶让眼睛先抓"区段"再抓"数值"。
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let mut block = Block::default()
-        .title("Registers [F3]")
+        .title(" Registers [F3] ")
         .borders(Borders::ALL);
     if app.focus() == FocusPane::Registers {
         block = block.border_style(Style::default().fg(Color::Cyan));
@@ -18,33 +28,99 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         Some(vm) => {
             let c = &vm.cpu;
             vec![
-                Line::from(format!(
-                    "ax={:04X}  bx={:04X}  cx={:04X}  dx={:04X}",
-                    c.ax, c.bx, c.cx, c.dx
-                )),
-                Line::from(format!(
-                    "si={:04X}  di={:04X}  bp={:04X}  sp={:04X}",
-                    c.si, c.di, c.bp, c.sp
-                )),
-                Line::from(format!(
-                    "ip={:04X}  ah={:02X} al={:02X}  bh={:02X} bl={:02X}",
-                    c.ip,
-                    (c.ax >> 8) as u8,
-                    c.ax as u8,
-                    (c.bx >> 8) as u8,
-                    c.bx as u8,
-                )),
-                Line::from(format!(
-                    "          ch={:02X} cl={:02X}  dh={:02X} dl={:02X}",
-                    (c.cx >> 8) as u8,
-                    c.cx as u8,
-                    (c.dx >> 8) as u8,
-                    c.dx as u8,
-                )),
+                section_line(
+                    "General",
+                    &[
+                        ("ax", word(c.ax)),
+                        ("bx", word(c.bx)),
+                        ("cx", word(c.cx)),
+                        ("dx", word(c.dx)),
+                    ],
+                ),
+                byte_aliases_line(c.ax, c.bx, c.cx, c.dx),
+                section_line(
+                    "Index",
+                    &[
+                        ("si", word(c.si)),
+                        ("di", word(c.di)),
+                        ("bp", word(c.bp)),
+                        ("sp", word(c.sp)),
+                    ],
+                ),
+                section_line("Pointer", &[("ip", word(c.ip))]),
             ]
         }
-        None => vec![Line::from("(no vm)")],
+        None => vec![Line::from(Span::styled(
+            "(no vm)",
+            Style::default().fg(Color::DarkGray),
+        ))],
     };
 
     Paragraph::new(lines).block(block).render(area, buf);
+}
+
+const LABEL_WIDTH: usize = 9;
+
+fn section_line(label: &str, entries: &[(&str, String)]) -> Line<'static> {
+    let mut spans = vec![Span::styled(
+        format!("{:width$}", label, width = LABEL_WIDTH),
+        Style::default()
+            .fg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD),
+    )];
+    for (i, (name, value)) in entries.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("  "));
+        }
+        spans.push(Span::styled(
+            format!("{name}="),
+            Style::default().fg(Color::Gray),
+        ));
+        spans.push(Span::styled(
+            value.clone(),
+            Style::default().fg(Color::White),
+        ));
+    }
+    Line::from(spans)
+}
+
+/// 8 位别名行：ax/bx/cx/dx 各自一组 `xh=NN xl=NN`，组间用三个空格分隔，
+/// 让每组开头与上一行 `ax=XXXX  bx=XXXX  cx=XXXX  dx=XXXX` 的对应字段对齐。
+fn byte_aliases_line(ax: u16, bx: u16, cx: u16, dx: u16) -> Line<'static> {
+    let mut spans = vec![Span::raw(" ".repeat(LABEL_WIDTH))];
+    for (i, (h_name, h_val, l_name, l_val)) in [
+        ("ah", (ax >> 8) as u8, "al", ax as u8),
+        ("bh", (bx >> 8) as u8, "bl", bx as u8),
+        ("ch", (cx >> 8) as u8, "cl", cx as u8),
+        ("dh", (dx >> 8) as u8, "dl", dx as u8),
+    ]
+    .iter()
+    .enumerate()
+    {
+        if i > 0 {
+            spans.push(Span::raw("   "));
+        }
+        spans.push(Span::styled(
+            format!("{h_name}="),
+            Style::default().fg(Color::Gray),
+        ));
+        spans.push(Span::styled(
+            format!("{h_val:02X}"),
+            Style::default().fg(Color::White),
+        ));
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(
+            format!("{l_name}="),
+            Style::default().fg(Color::Gray),
+        ));
+        spans.push(Span::styled(
+            format!("{l_val:02X}"),
+            Style::default().fg(Color::White),
+        ));
+    }
+    Line::from(spans)
+}
+
+fn word(v: u16) -> String {
+    format!("{v:04X}")
 }

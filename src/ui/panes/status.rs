@@ -7,7 +7,15 @@ use ratatui::widgets::{Paragraph, Widget};
 use crate::app::{App, FocusPane, InputMode, RunStatus};
 
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
+    let waiting_input = app
+        .vm()
+        .map(|vm| vm.console.waiting_for_input())
+        .unwrap_or(false);
     let (status_label, status_style) = match app.status() {
+        RunStatus::Paused if waiting_input => (
+            "● Paused (waiting input)",
+            Style::default().fg(Color::Magenta),
+        ),
         RunStatus::Paused => ("● Paused", Style::default().fg(Color::Yellow)),
         RunStatus::Halted => ("● Halted", Style::default().fg(Color::Green)),
         RunStatus::Error(_) => ("● Error", Style::default().fg(Color::Red)),
@@ -49,6 +57,11 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         Span::raw(cs_ip),
         Span::raw("  "),
         Span::raw(format!("#steps={}", app.steps_executed())),
+        Span::raw("  "),
+        Span::raw(format!(
+            "#int={}",
+            app.vm().map(|vm| vm.console.interrupts()).unwrap_or(0)
+        )),
         Span::raw("  focus="),
         Span::styled(focus_name, Style::default().fg(Color::Cyan)),
         Span::raw("  mode="),

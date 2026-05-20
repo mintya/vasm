@@ -1,6 +1,7 @@
 pub mod app;
 pub mod asm;
 pub mod cli;
+pub mod encoding;
 pub mod error;
 pub mod trace;
 pub mod ui;

@@ -19,6 +19,7 @@ use crate::asm::ast::Program;
 use crate::asm::diagnostics::Severity;
 use crate::asm::parser;
 use crate::cli::Cli;
+use crate::encoding::Encoding;
 use crate::error::Result;
 use crate::ui;
 use crate::vm::i8086::exec::{StepOutcome, Vm};
@@ -43,6 +44,15 @@ pub enum FocusPane {
 pub enum InputMode {
     Control,
     Input,
+}
+
+/// 用户敲在 Console 焦点下的一个字符的视觉副本。`bytes` 是它在 `vm.console.input`
+/// 字节流里占用的字节数——程序消费时按这个数从 echo 头部弹掉对应字符。
+/// `display` 是渲染时使用的字符串（控制字符用 caret notation 如 `^H` `^M` `^I`）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EchoChar {
+    pub display: String,
+    pub bytes: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,8 +91,12 @@ pub struct App {
     source_cursor: u32, // 1-based 源码行
     memory_origin_seg: u16,
     memory_origin_off: u16,
-    console_input_buf: Vec<u8>,
     console_scroll: u16,
+    /// 用户在 Console 焦点下敲入字符的视觉副本（已编码字节数 + 显示用字符）。
+    /// 每帧 render 前调 `sync_echo`，按 vm.console.input 当前长度从头弹掉
+    /// 已被程序消费的字符——所以未消费的部分始终可见，消费过的会消失（并由
+    /// 程序自己的 output 接手呈现）。
+    console_echo: Vec<EchoChar>,
     breakpoints: HashSet<u32>, // 物理地址
     call_stack: Vec<CallFrame>,
     prompt: Option<Prompt>,
@@ -90,6 +104,7 @@ pub struct App {
     should_quit: bool,
     max_steps: u64,
     mem_kb: u32,
+    encoding: Encoding,
 }
 
 impl App {
@@ -99,6 +114,7 @@ impl App {
         program: Program,
         mem_kb: u32,
         max_steps: u64,
+        encoding: Encoding,
     ) -> Self {
         let mut app = Self {
             file,
@@ -112,8 +128,8 @@ impl App {
             source_cursor: 1,
             memory_origin_seg: 0,
             memory_origin_off: 0,
-            console_input_buf: Vec::new(),
             console_scroll: 0,
+            console_echo: Vec::new(),
             breakpoints: HashSet::new(),
             call_stack: Vec::new(),
             prompt: None,
@@ -121,6 +137,7 @@ impl App {
             should_quit: false,
             max_steps,
             mem_kb,
+            encoding,
         };
         app.reboot_vm(program);
         app
@@ -129,8 +146,8 @@ impl App {
     /// 用给定 program 重新 boot VM，但保留断点。停在入口（Paused）。
     fn reboot_vm(&mut self, program: Program) {
         self.steps_executed = 0;
-        self.console_input_buf.clear();
         self.console_scroll = 0;
+        self.console_echo.clear();
         self.call_stack.clear();
         match Vm::boot(program, self.mem_kb) {
             Ok(vm) => {
@@ -211,6 +228,11 @@ impl App {
             Ok(StepOutcome::Halted) => {
                 self.status = RunStatus::Halted;
             }
+            Ok(StepOutcome::WaitingForInput) => {
+                // 状态保持 Paused；UI 层根据 vm.console.waiting_for_input() 显示提示
+                // 自动把焦点切到 Console，让用户立即可以敲键
+                self.focus = FocusPane::Console;
+            }
             Err(e) => {
                 self.status = RunStatus::Error(e.to_string());
             }
@@ -221,7 +243,7 @@ impl App {
         }
     }
 
-    /// 持续单步直到 halt / error / 命中断点 / 超过 max_steps。
+    /// 持续单步直到 halt / error / 命中断点 / 等待输入 / 超过 max_steps。
     pub fn run_continue(&mut self) {
         if !matches!(self.status, RunStatus::Paused) {
             return;
@@ -231,6 +253,15 @@ impl App {
         loop {
             self.step_once();
             if !matches!(self.status, RunStatus::Paused) {
+                return;
+            }
+            // 等待输入：停下让用户敲键
+            if self
+                .vm
+                .as_ref()
+                .map(|vm| vm.console.waiting_for_input())
+                .unwrap_or(false)
+            {
                 return;
             }
             // 命中断点？（当前 ip 已经指向下一条要执行的指令）
@@ -272,6 +303,14 @@ impl App {
         loop {
             self.step_once();
             if !matches!(self.status, RunStatus::Paused) {
+                return;
+            }
+            if self
+                .vm
+                .as_ref()
+                .map(|vm| vm.console.waiting_for_input())
+                .unwrap_or(false)
+            {
                 return;
             }
             if Some(target_phys) == self.current_phys() {
@@ -472,6 +511,14 @@ impl App {
         self.vm.as_ref()
     }
 
+    pub fn vm_mut(&mut self) -> Option<&mut Vm> {
+        self.vm.as_mut()
+    }
+
+    pub fn encoding(&self) -> Encoding {
+        self.encoding
+    }
+
     pub fn status(&self) -> &RunStatus {
         &self.status
     }
@@ -535,16 +582,54 @@ impl App {
         self.memory_origin_off = next & !0x000F;
     }
 
-    pub fn console_input(&self) -> &[u8] {
-        &self.console_input_buf
-    }
-
-    pub fn push_console_input(&mut self, b: u8) {
-        self.console_input_buf.push(b);
-    }
-
     pub fn console_scroll(&self) -> u16 {
         self.console_scroll
+    }
+
+    /// 当前 echo 视觉副本（已自动同步过——render 前应先调 `sync_echo`）。
+    pub fn console_echo(&self) -> &[EchoChar] {
+        &self.console_echo
+    }
+
+    /// 追加一个 echo 字符。`display` 是渲染时使用的字符串（控制字符可用
+    /// caret notation 如 `^H` `^M` `^I`），`byte_len` 是该字符在 input 字节流
+    /// 里占用的字节数。
+    pub fn push_echo(&mut self, display: impl Into<String>, byte_len: u8) {
+        if byte_len == 0 {
+            return;
+        }
+        self.console_echo.push(EchoChar {
+            display: display.into(),
+            bytes: byte_len,
+        });
+    }
+
+    /// 按 `vm.console.input` 队列当前长度从 echo 头部弹掉已被程序消费的字符。
+    /// 渲染前调用一次。
+    pub fn sync_echo(&mut self) {
+        let pending = self
+            .vm
+            .as_ref()
+            .map(|vm| vm.console.input_len())
+            .unwrap_or(0);
+        let echo_bytes: usize = self.console_echo.iter().map(|e| e.bytes as usize).sum();
+        if echo_bytes <= pending {
+            return;
+        }
+        let mut to_drop = echo_bytes - pending;
+        let mut idx = 0usize;
+        while to_drop > 0 && idx < self.console_echo.len() {
+            let b = self.console_echo[idx].bytes as usize;
+            if b > to_drop {
+                // 不可能：echo 字符要么整个被消费要么没有，bytes 是原子单位。
+                // 防御性地把它也算消费掉。
+                idx += 1;
+                break;
+            }
+            to_drop -= b;
+            idx += 1;
+        }
+        self.console_echo.drain(..idx);
     }
 
     pub fn scroll_console(&mut self, delta: i32) {
@@ -638,6 +723,7 @@ pub fn run(cli: Cli, program: Program) -> Result<()> {
         program,
         cli.mem_kb,
         cli.max_steps,
+        cli.encoding,
     );
 
     let _guard = TerminalGuard::enter()?;
@@ -645,6 +731,7 @@ pub fn run(cli: Cli, program: Program) -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     while !app.should_quit {
+        app.sync_echo();
         terminal.draw(|f| ui::render(f, &app))?;
         if let Some(key) = event::poll_key(Duration::from_millis(100))? {
             keymap::handle(key, &mut app)?;

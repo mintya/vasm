@@ -43,6 +43,10 @@ fn main() -> Result<()> {
         vm.run_until_halt(cli.max_steps)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         print_state(&vm);
+        if !vm.console.output().is_empty() {
+            println!("--- console output ---");
+            println!("{}", cli.encoding.decode(vm.console.output()));
+        }
         return Ok(());
     }
 

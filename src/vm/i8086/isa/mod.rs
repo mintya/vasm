@@ -2,6 +2,8 @@ pub mod arith;
 pub mod control;
 pub mod data_move;
 pub mod flags;
+pub mod intr;
+pub mod io;
 pub mod logic;
 pub mod operand;
 pub mod shift;
@@ -62,6 +64,13 @@ pub fn dispatch(vm: &mut Vm, instr: &Instruction, span: Span) -> Result<(), VmEr
         | "jl" | "jnge" | "jge" | "jnl" | "jle" | "jng" | "jg" | "jnle" => {
             control::jcc(vm, m, ops, span)
         }
+        // 中断与 I/O（M5）
+        "int" => intr::int_(vm, ops, span),
+        "iret" => intr::iret_(vm, ops, span),
+        "cli" => intr::cli_(vm),
+        "sti" => intr::sti_(vm),
+        "in" => io::in_(vm, ops, span),
+        "out" => io::out_(vm, ops, span),
         m => Err(VmError::UnsupportedInstruction {
             mnemonic: m.into(),
             span,

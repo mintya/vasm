@@ -1,3 +1,4 @@
+pub mod console;
 pub mod cpu;
 pub mod exec;
 pub mod isa;

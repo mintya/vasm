@@ -44,18 +44,54 @@ fn handle_input(ev: KeyEvent, app: &mut App) -> Result<()> {
         // Console 滚动用 PgUp/PgDn，不入缓冲
         KeyCode::PageUp => app.scroll_console(-5),
         KeyCode::PageDown => app.scroll_console(5),
-        KeyCode::Char(c) => {
-            let mut buf = [0u8; 4];
-            for b in c.encode_utf8(&mut buf).as_bytes() {
-                app.push_console_input(*b);
-            }
-        }
-        KeyCode::Enter => app.push_console_input(b'\n'),
-        KeyCode::Backspace => app.push_console_input(0x08),
-        KeyCode::Tab => app.push_console_input(b'\t'),
+        KeyCode::Char(c) => type_char(app, c),
+        KeyCode::Enter => press_enter(app),
+        KeyCode::Backspace => press_backspace(app),
+        KeyCode::Tab => press_tab(app),
         _ => {}
     }
     Ok(())
+}
+
+/// 敲一个可打印字符：编码后字节进 vm.console.input；echo 推同一个字符（GBK
+/// 时 byte_len = 2，但显示一个字形）。
+fn type_char(app: &mut App, c: char) {
+    let mut buf = Vec::with_capacity(4);
+    app.encoding().encode_char(c, &mut buf);
+    let byte_len = buf.len() as u8;
+    if let Some(vm) = app.vm_mut() {
+        for b in buf {
+            vm.console.push_input(b);
+        }
+    }
+    if byte_len > 0 {
+        app.push_echo(c.to_string(), byte_len);
+    }
+}
+
+/// Enter：input 进 0x0D，echo 用 `^M` 标记可见。
+fn press_enter(app: &mut App) {
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_input(b'\r');
+    }
+    app.push_echo("^M", 1);
+}
+
+/// Backspace：input 进 0x08，echo 用 `^H` 标记可见。**没有编辑效果**——
+/// 程序要么用 ah=01h 自己处理 0x08，要么用 ah=0Ah 让 DOS 代劳行编辑。
+fn press_backspace(app: &mut App) {
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_input(0x08);
+    }
+    app.push_echo("^H", 1);
+}
+
+/// Tab：input 进 0x09，echo 用 `^I` 标记可见。
+fn press_tab(app: &mut App) {
+    if let Some(vm) = app.vm_mut() {
+        vm.console.push_input(b'\t');
+    }
+    app.push_echo("^I", 1);
 }
 
 fn handle_control(ev: KeyEvent, app: &mut App) -> Result<()> {

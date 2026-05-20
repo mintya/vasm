@@ -2,6 +2,7 @@ use thiserror::Error;
 
 use crate::asm::ast::{Instruction, Program};
 use crate::asm::diagnostics::Span;
+use crate::vm::i8086::console::ConsoleIo;
 use crate::vm::i8086::cpu::Cpu;
 use crate::vm::i8086::isa;
 use crate::vm::i8086::loader::{self, InstrSlot, LoadError, LoadedProgram, SegmentLayout};
@@ -27,6 +28,16 @@ pub enum VmError {
     BadInstructionPointer { seg: String, ip: u16 },
     #[error("cs=0x{cs:04X} does not match any loaded segment")]
     UnknownCodeSegment { cs: u16 },
+    #[error("unsupported DOS function ah=0x{ah:02X}")]
+    UnsupportedDosFunc { ah: u8, span: Span },
+    #[error("unsupported BIOS function int 0x{int_num:02X} ah=0x{ah:02X}")]
+    UnsupportedBiosFunc { int_num: u8, ah: u8, span: Span },
+    #[error("unhandled interrupt 0x{num:02X} (vector 0:0)")]
+    UnhandledInterrupt { num: u8, span: Span },
+    #[error("unsupported I/O port 0x{port:04X}")]
+    UnsupportedPort { port: u16, span: Span },
+    #[error("waiting for console input in headless mode")]
+    WaitingForInputHeadless,
     #[error(transparent)]
     Mem(#[from] MemError),
     #[error(transparent)]
@@ -37,12 +48,14 @@ pub enum VmError {
 pub enum StepOutcome {
     Stepped,
     Halted,
+    WaitingForInput,
 }
 
 pub struct Vm {
     pub cpu: Cpu,
     pub mem: Memory,
     pub program: LoadedProgram,
+    pub console: ConsoleIo,
     halted: bool,
 }
 
@@ -57,6 +70,7 @@ impl Vm {
             cpu,
             mem: memory,
             program: loaded,
+            console: ConsoleIo::new(),
             halted: false,
         })
     }
@@ -109,7 +123,16 @@ impl Vm {
         // 默认 advance ip；跳转指令可以在 dispatch 内覆盖。
         self.cpu.ip = ip + slot.size;
 
+        // 清除上一轮可能残留的 waiting 标志（stub 会在需要时重设）
+        self.console.set_waiting(false);
+
         isa::dispatch(self, &slot.instr, slot.span)?;
+
+        if self.console.waiting_for_input() {
+            // stub 发现输入缓冲为空 → 把 ip 退回这条 int，让用户敲键后重试
+            self.cpu.ip = slot.ip_offset;
+            return Ok(StepOutcome::WaitingForInput);
+        }
 
         if self.halted {
             Ok(StepOutcome::Halted)
@@ -120,8 +143,10 @@ impl Vm {
 
     pub fn run_until_halt(&mut self, max_steps: u64) -> Result<(), VmError> {
         for _ in 0..max_steps {
-            if let StepOutcome::Halted = self.step()? {
-                return Ok(());
+            match self.step()? {
+                StepOutcome::Halted => return Ok(()),
+                StepOutcome::WaitingForInput => return Err(VmError::WaitingForInputHeadless),
+                StepOutcome::Stepped => {}
             }
         }
         Err(VmError::StepLimitExceeded { max_steps })
@@ -189,8 +214,8 @@ mod tests {
 
     #[test]
     fn unsupported_instruction_returns_error() {
-        // in/out 在 M5 才接入，M2-M4 应当报 UnsupportedInstruction
-        let mut vm = boot("code segment\n  in al, 60h\n  hlt\ncode ends\nend\n");
+        // 选一个真正没接入的助记符（lea 在教材后期才用，本仓库未实现）
+        let mut vm = boot("code segment\n  lea ax, [bx]\n  hlt\ncode ends\nend\n");
         let err = vm.step().unwrap_err();
         assert!(matches!(err, VmError::UnsupportedInstruction { .. }));
     }

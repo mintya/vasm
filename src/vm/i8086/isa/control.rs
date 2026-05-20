@@ -160,14 +160,14 @@ pub fn retf(vm: &mut Vm, ops: &[Operand], span: Span) -> Result<(), VmError> {
     Ok(())
 }
 
-fn push_word(vm: &mut Vm, value: u16, _span: Span) -> Result<(), VmError> {
+pub(crate) fn push_word(vm: &mut Vm, value: u16, _span: Span) -> Result<(), VmError> {
     vm.cpu.sp = vm.cpu.sp.wrapping_sub(2);
     let phys = Memory::phys(vm.cpu.ss, vm.cpu.sp);
     vm.mem.write_u16(phys, value)?;
     Ok(())
 }
 
-fn pop_word(vm: &mut Vm, _span: Span) -> Result<u16, VmError> {
+pub(crate) fn pop_word(vm: &mut Vm, _span: Span) -> Result<u16, VmError> {
     let phys = Memory::phys(vm.cpu.ss, vm.cpu.sp);
     let v = vm.mem.read_u16(phys)?;
     vm.cpu.sp = vm.cpu.sp.wrapping_add(2);
