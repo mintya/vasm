@@ -1,6 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-use crate::app::editor;
 use crate::app::{App, FocusPane, InputMode, PromptKind};
 use crate::error::Result;
 
@@ -87,11 +86,8 @@ fn handle_control(ev: KeyEvent, app: &mut App) -> Result<()> {
             app.cursor_to_line(total);
         }
         (KeyCode::Char('e'), KeyModifiers::NONE) => {
-            let file = app.file().clone();
-            editor::launch_editor(&file)?;
-            if let Err(err) = app.reload() {
-                tracing::warn!("reload failed: {err}");
-            }
+            // 实际调起放到 app::run 主循环，那里有 Terminal 句柄可以强制清屏。
+            app.request_editor();
         }
         _ => {}
     }

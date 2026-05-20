@@ -86,6 +86,7 @@ pub struct App {
     breakpoints: HashSet<u32>, // 物理地址
     call_stack: Vec<CallFrame>,
     prompt: Option<Prompt>,
+    editor_pending: bool, // 主循环看到 true 后调起外部编辑器并清屏
     should_quit: bool,
     max_steps: u64,
     mem_kb: u32,
@@ -116,6 +117,7 @@ impl App {
             breakpoints: HashSet::new(),
             call_stack: Vec::new(),
             prompt: None,
+            editor_pending: false,
             should_quit: false,
             max_steps,
             mem_kb,
@@ -554,6 +556,14 @@ impl App {
         self.should_quit = true;
     }
 
+    pub fn request_editor(&mut self) {
+        self.editor_pending = true;
+    }
+
+    pub fn take_editor_request(&mut self) -> bool {
+        std::mem::take(&mut self.editor_pending)
+    }
+
     pub fn highlighted_line(&self) -> Option<u32> {
         let vm = self.vm.as_ref()?;
         let seg = vm
@@ -561,7 +571,11 @@ impl App {
             .segments
             .values()
             .find(|s| s.base_paragraph == vm.cpu.cs)?;
-        if let Some(slot) = seg.instructions.iter().find(|s| s.ip_offset == vm.cpu.ip) {
+        // Halted 之后 ip 已指向"下一条"，可能正好落在物理上紧邻的别的指令上，
+        // 此时不应把 ▶ 标到那条不会执行的指令；强制回退到最后已执行的那条。
+        if !matches!(self.status, RunStatus::Halted)
+            && let Some(slot) = seg.instructions.iter().find(|s| s.ip_offset == vm.cpu.ip)
+        {
             return Some(slot.span.line);
         }
         seg.instructions
@@ -634,6 +648,15 @@ pub fn run(cli: Cli, program: Program) -> Result<()> {
         terminal.draw(|f| ui::render(f, &app))?;
         if let Some(key) = event::poll_key(Duration::from_millis(100))? {
             keymap::handle(key, &mut app)?;
+        }
+        if app.take_editor_request() {
+            let file = app.file().clone();
+            editor::launch_editor(&file)?;
+            // 强制下一次 draw 是完整重绘（编辑器扰乱了底层 buffer）
+            terminal.clear()?;
+            if let Err(err) = app.reload() {
+                tracing::warn!("reload failed: {err}");
+            }
         }
     }
 

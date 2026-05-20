@@ -294,3 +294,26 @@ fn call_stack_grows_after_call() {
         "call stack 标题应显示数量: {s}"
     );
 }
+
+#[test]
+fn halted_pc_points_to_hlt_not_following_instr() {
+    // 回归：hlt 之后 ip += 1 可能正好落在紧随其后的子过程指令上；UI 不应把 ▶ 标到那条不会执行的指令。
+    let src = "code segment\nstart:\n  mov ax, 1\n  hlt\nsubproc:\n  add ax, bx\n  ret\ncode ends\nend start\n";
+    let (program, diags) = parser::parse(src);
+    assert!(diags.is_empty(), "{diags:?}");
+    let mut app = App::boot(
+        PathBuf::from("tests/halted.asm"),
+        src.to_string(),
+        program,
+        1024,
+        100,
+    );
+    app.run_continue();
+    assert!(matches!(app.status(), RunStatus::Halted));
+    let hi = app.highlighted_line().expect("有 PC 行");
+    let line_text = app.source_text().lines().nth((hi - 1) as usize).unwrap();
+    assert!(
+        line_text.contains("hlt"),
+        "halted 后 ▶ 应指 hlt 行，实际指向 L{hi}: {line_text:?}"
+    );
+}
