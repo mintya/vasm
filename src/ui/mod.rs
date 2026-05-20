@@ -3,12 +3,29 @@ pub mod panes;
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::widgets::{Block, Borders, Widget};
 
 use crate::app::App;
 
 pub fn render(frame: &mut Frame, app: &App) {
-    let area = frame.area();
+    let full = frame.area();
     let buf = frame.buffer_mut();
+
+    // 最外层圆角边框：标题居中显示文件名
+    let title = format!(" VisualASM · {} ", app.file_display());
+    let outer = Block::default()
+        .title(title)
+        .title_alignment(ratatui::layout::Alignment::Center)
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(
+            Style::default()
+                .fg(Color::Blue)
+                .add_modifier(Modifier::BOLD),
+        );
+    let area = outer.inner(full);
+    outer.render(full, buf);
 
     // 五行：状态栏 / 三栏主区 / 内存 / 解释 / 键位
     let rows = Layout::default()
