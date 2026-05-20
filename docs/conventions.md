@@ -127,7 +127,7 @@ examples/              # 教材章节配套示例
 
 - 默认分支 `main`，开发分支 `feat/<scope>`、`fix/<scope>`、`docs/<scope>`。
 - Commit 信息采用 Conventional Commits：`feat(vm): add loop instruction`。
-- **Commit message 一律不写 `Co-Authored-By` 或其他工具/AI 署名**——保持 history 干净。
+- **Commit message 一律不写 `Co-Authored-By` 或其他工具/AI 署名**——保持 history 干净。**用中文**
 - 单个 PR 聚焦一个目的；不要把无关重构混入功能 PR。
 - 不直接 push 到 `main`；通过 PR 合并。
 
