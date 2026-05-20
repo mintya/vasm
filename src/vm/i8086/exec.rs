@@ -182,8 +182,8 @@ mod tests {
 
     #[test]
     fn unsupported_instruction_returns_error() {
-        // mul 在 M4 才实现，M2 应当报 UnsupportedInstruction
-        let mut vm = boot("code segment\n  mul bx\n  hlt\ncode ends\nend\n");
+        // in/out 在 M5 才接入，M2-M4 应当报 UnsupportedInstruction
+        let mut vm = boot("code segment\n  in al, 60h\n  hlt\ncode ends\nend\n");
         let err = vm.step().unwrap_err();
         assert!(matches!(err, VmError::UnsupportedInstruction { .. }));
     }

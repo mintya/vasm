@@ -65,6 +65,23 @@ pub fn after_dec_u8(a: u8, result: u8, flags: &mut Flags) {
     flags.cf = cf;
 }
 
+/// and/or/xor/test: CF=OF=0, AF undefined (我们不动), 按 result 更新 ZF/SF/PF。
+pub fn after_logical_u16(result: u16, flags: &mut Flags) {
+    flags.cf = false;
+    flags.of = false;
+    flags.zf = result == 0;
+    flags.sf = result & 0x8000 != 0;
+    flags.pf = parity(result as u8);
+}
+
+pub fn after_logical_u8(result: u8, flags: &mut Flags) {
+    flags.cf = false;
+    flags.of = false;
+    flags.zf = result == 0;
+    flags.sf = result & 0x80 != 0;
+    flags.pf = parity(result);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

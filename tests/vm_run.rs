@@ -168,7 +168,95 @@ fn fall_off_segment_end_halts() {
 
 #[test]
 fn unsupported_instruction_reports_error() {
-    let mut vm = boot_str("code segment\n  jmp far_away\n  hlt\ncode ends\nend\n");
+    let mut vm = boot_str("code segment\n  in al, 60h\n  hlt\ncode ends\nend\n");
     let err = vm.step().unwrap_err();
     assert!(matches!(err, VmError::UnsupportedInstruction { .. }));
+}
+
+// -------------------- M4 端到端 --------------------
+
+#[test]
+fn cmp_jne_loop_counts_down_to_zero() {
+    // 等价于 sum_loop 但用 cmp+jne 控制循环
+    let mut vm = boot_str(
+        "code segment\nstart:\n  mov ax, 0\n  mov bx, 10\nlp:\n  add ax, bx\n  dec bx\n  cmp bx, 0\n  jne lp\n  hlt\ncode ends\nend start\n",
+    );
+    vm.run_until_halt(1000).unwrap();
+    assert_eq!(vm.cpu.ax, 55); // 10+9+...+1
+    assert_eq!(vm.cpu.bx, 0);
+    assert!(vm.cpu.flags.zf);
+}
+
+#[test]
+fn call_ret_returns_to_next_instruction() {
+    let mut vm = boot_str(
+        "stack segment\n  db 32 dup (0)\nstack ends\ncode segment\n  assume cs:code, ss:stack\nstart:\n  mov ax, stack\n  mov ss, ax\n  mov sp, 32\n  call inc_ax\n  call inc_ax\n  hlt\ninc_ax:\n  inc ax\n  ret\ncode ends\nend start\n",
+    );
+    vm.run_until_halt(100).unwrap();
+    assert_eq!(vm.cpu.ax & 0xFF, 2); // 调用两次 inc
+    assert_eq!(vm.cpu.sp, 32); // 栈对称回到初始
+}
+
+#[test]
+fn shl_by_four_multiplies_by_sixteen() {
+    let mut vm = boot_str("code segment\n  mov ax, 3\n  shl ax, 4\n  hlt\ncode ends\nend\n");
+    vm.run_until_halt(100).unwrap();
+    assert_eq!(vm.cpu.ax, 0x0030);
+}
+
+#[test]
+fn mul_word_writes_dx_ax() {
+    let mut vm =
+        boot_str("code segment\n  mov ax, 1000h\n  mov bx, 10h\n  mul bx\n  hlt\ncode ends\nend\n");
+    vm.run_until_halt(100).unwrap();
+    // 0x1000 * 0x10 = 0x10000 → dx=1 ax=0
+    assert_eq!(vm.cpu.dx, 1);
+    assert_eq!(vm.cpu.ax, 0);
+    assert!(vm.cpu.flags.cf); // dx 非零
+}
+
+#[test]
+fn div_word_quotient_and_remainder() {
+    let mut vm = boot_str(
+        "code segment\n  mov dx, 0\n  mov ax, 100\n  mov bx, 7\n  div bx\n  hlt\ncode ends\nend\n",
+    );
+    vm.run_until_halt(100).unwrap();
+    assert_eq!(vm.cpu.ax, 14); // 100/7
+    assert_eq!(vm.cpu.dx, 2); // 100%7
+}
+
+#[test]
+fn div_by_zero_returns_error() {
+    let mut vm = boot_str(
+        "code segment\n  mov dx, 0\n  mov ax, 1\n  mov bx, 0\n  div bx\n  hlt\ncode ends\nend\n",
+    );
+    let err = vm.run_until_halt(100).unwrap_err();
+    assert!(matches!(err, VmError::DivideByZero { .. }));
+}
+
+#[test]
+fn jcxz_takes_branch_when_cx_zero() {
+    let mut vm = boot_str(
+        "code segment\nstart:\n  mov cx, 0\n  jcxz skip\n  mov ax, 1\nskip:\n  mov bx, 2\n  hlt\ncode ends\nend start\n",
+    );
+    vm.run_until_halt(100).unwrap();
+    assert_eq!(vm.cpu.ax, 0); // 没执行
+    assert_eq!(vm.cpu.bx, 2);
+}
+
+#[test]
+fn xor_clears_register_and_sets_zf() {
+    let mut vm = boot_str("code segment\n  mov ax, 0FFFFh\n  xor ax, ax\n  hlt\ncode ends\nend\n");
+    vm.run_until_halt(100).unwrap();
+    assert_eq!(vm.cpu.ax, 0);
+    assert!(vm.cpu.flags.zf);
+}
+
+#[test]
+fn unconditional_jmp_to_label() {
+    let mut vm = boot_str(
+        "code segment\nstart:\n  jmp forward\n  mov ax, 1\nforward:\n  mov ax, 42\n  hlt\ncode ends\nend start\n",
+    );
+    vm.run_until_halt(100).unwrap();
+    assert_eq!(vm.cpu.ax, 42);
 }

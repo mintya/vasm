@@ -404,14 +404,42 @@ fn push_le(out: &mut Vec<u8>, value: i64, elem_bytes: u32) {
 
 /// 粗估每条指令的字节大小，仅用于给 ip 一个合理递增量。
 pub fn instr_size_estimate(instr: &Instruction) -> u16 {
-    match instr.mnemonic.as_str() {
+    let m = instr.mnemonic.as_str();
+    let ops = &instr.operands;
+    match m {
         "hlt" | "nop" | "pushf" | "popf" => 1,
-        "push" | "pop" | "inc" | "dec" if single_reg16(&instr.operands) => 1,
-        "loop" => 2,
-        "mov" => mov_size(&instr.operands),
-        "add" | "sub" | "and" | "or" | "xor" | "cmp" => arith_size(&instr.operands),
-        "xchg" => xchg_size(&instr.operands),
+        "push" | "pop" | "inc" | "dec" if single_reg16(ops) => 1,
+        "ret" | "retf" if ops.is_empty() => 1,
+        "ret" | "retf" => 3, // ret imm16 / retf imm16
+        "loop" | "jcxz" => 2,
+        "jmp" => match ops.first() {
+            Some(Operand::Far { .. }) => 5,
+            _ => 3,
+        },
+        "call" => match ops.first() {
+            Some(Operand::Far { .. }) => 5,
+            _ => 3,
+        },
+        "mov" => mov_size(ops),
+        "add" | "sub" | "and" | "or" | "xor" | "cmp" | "test" => arith_size(ops),
+        "mul" | "div" | "neg" | "not" => 2,
+        "shl" | "sal" | "shr" | "sar" | "rol" | "ror" | "rcl" | "rcr" => shift_size(ops),
+        "xchg" => xchg_size(ops),
+        // 所有 jcc：短跳 2 字节
+        "je" | "jz" | "jne" | "jnz" | "js" | "jns" | "jo" | "jno" | "jp" | "jpe" | "jnp"
+        | "jpo" | "jc" | "jb" | "jnae" | "jnc" | "jae" | "jnb" | "jbe" | "jna" | "ja" | "jnbe"
+        | "jl" | "jnge" | "jge" | "jnl" | "jle" | "jng" | "jg" | "jnle" => 2,
         _ => 3,
+    }
+}
+
+fn shift_size(ops: &[Operand]) -> u16 {
+    // count 是 1 或 cl 都按 2 字节；其他立即数按 3 字节（80186+）。
+    match ops {
+        [_, Operand::Imm(crate::asm::ast::Expr::Int(1))] => 2,
+        [_, Operand::Reg(name)] if name.eq_ignore_ascii_case("cl") => 2,
+        [_, Operand::Imm(_)] => 3,
+        _ => 2,
     }
 }
 
