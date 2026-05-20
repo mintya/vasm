@@ -4,6 +4,7 @@ pub mod explain;
 pub mod flags;
 pub mod keymap;
 pub mod memory;
+pub mod prompt;
 pub mod registers;
 pub mod segments;
 pub mod source;

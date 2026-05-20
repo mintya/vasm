@@ -16,6 +16,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let inner_rows = area.height.saturating_sub(2) as usize;
     let scroll = app.source_scroll() as usize;
     let hi = app.highlighted_line(); // 1-based
+    let cursor = app.source_cursor();
     let mut lines = Vec::with_capacity(inner_rows);
     let src_lines: Vec<&str> = app.source_text().lines().collect();
     let total = src_lines.len();
@@ -28,12 +29,26 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
             break;
         }
         let line_no = (line_idx + 1) as u32;
-        let marker = if Some(line_no) == hi { "▶" } else { " " };
+        let is_cursor = line_no == cursor;
+        let is_pc = Some(line_no) == hi;
+        let bp = app.line_has_breakpoint(line_no);
+        let bp_marker = if bp { "●" } else { " " };
+        let pc_marker = if is_pc { "▶" } else { " " };
 
         let mut spans: Vec<Span<'static>> = Vec::new();
+        // gutter 1：bp 标记（红）
         spans.push(Span::styled(
-            format!("{marker} {line_no:>width$} │ ", width = gutter_width),
-            if Some(line_no) == hi {
+            bp_marker.to_string(),
+            if bp {
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            },
+        ));
+        // gutter 2：pc 标记（黄）+ 行号
+        spans.push(Span::styled(
+            format!("{pc_marker} {line_no:>width$} │ ", width = gutter_width),
+            if is_pc {
                 Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD)
@@ -42,7 +57,13 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
             },
         ));
         spans.extend(highlight_line(src_lines[line_idx]));
-        lines.push(Line::from(spans));
+
+        // cursor 行：在 Source 焦点时整行加 background 高亮
+        let mut line = Line::from(spans);
+        if is_cursor && app.focus() == FocusPane::Source {
+            line = line.style(Style::default().bg(Color::DarkGray));
+        }
+        lines.push(line);
     }
 
     Paragraph::new(lines).block(block).render(area, buf);

@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::app::editor;
-use crate::app::{App, FocusPane, InputMode};
+use crate::app::{App, FocusPane, InputMode, PromptKind};
 use crate::error::Result;
 
 pub fn handle(ev: KeyEvent, app: &mut App) -> Result<()> {
@@ -15,23 +15,37 @@ pub fn handle(ev: KeyEvent, app: &mut App) -> Result<()> {
         return Ok(());
     }
 
+    // Prompt 模式优先级最高
+    if app.prompt().is_some() {
+        return handle_prompt(ev, app);
+    }
+
     match app.mode() {
         InputMode::Input => handle_input(ev, app),
         InputMode::Control => handle_control(ev, app),
     }
 }
 
+fn handle_prompt(ev: KeyEvent, app: &mut App) -> Result<()> {
+    match ev.code {
+        KeyCode::Esc => app.close_prompt(),
+        KeyCode::Enter => app.prompt_submit(),
+        KeyCode::Backspace => app.prompt_backspace(),
+        KeyCode::Char(c) => app.prompt_push(c),
+        _ => {}
+    }
+    Ok(())
+}
+
 fn handle_input(ev: KeyEvent, app: &mut App) -> Result<()> {
     match ev.code {
         KeyCode::Esc => {
-            // 退回控制模式：把焦点切到 Source（任何非 Console 焦点都行）
             app.set_focus(FocusPane::Source);
         }
         // Console 滚动用 PgUp/PgDn，不入缓冲
         KeyCode::PageUp => app.scroll_console(-5),
         KeyCode::PageDown => app.scroll_console(5),
         KeyCode::Char(c) => {
-            // ASCII 字节直接进缓冲；非 ASCII 转换为 UTF-8 字节
             let mut buf = [0u8; 4];
             for b in c.encode_utf8(&mut buf).as_bytes() {
                 app.push_console_input(*b);
@@ -53,14 +67,28 @@ fn handle_control(ev: KeyEvent, app: &mut App) -> Result<()> {
         (KeyCode::F(1), _) => app.set_focus(FocusPane::Source),
         (KeyCode::F(2), _) => app.set_focus(FocusPane::Console),
         (KeyCode::F(3), _) => app.set_focus(FocusPane::Registers),
-        (KeyCode::Up, _) => scroll_focus(app, -1),
-        (KeyCode::Down, _) => scroll_focus(app, 1),
-        (KeyCode::PageUp, _) => scroll_focus(app, -10),
-        (KeyCode::PageDown, _) => scroll_focus(app, 10),
+        // 调试控制
+        (KeyCode::Char('s'), KeyModifiers::NONE) => app.step_once(),
+        (KeyCode::Char('n'), KeyModifiers::NONE) => app.step_over(),
+        (KeyCode::Char('c'), KeyModifiers::NONE) => app.run_continue(),
+        (KeyCode::Char('b'), KeyModifiers::NONE) => app.toggle_breakpoint_at_cursor(),
+        (KeyCode::Char('r'), KeyModifiers::NONE) => app.reset(),
+        (KeyCode::Char('g'), KeyModifiers::NONE) => app.open_prompt(PromptKind::Goto),
+        // 方向键：Source 焦点 → 移 cursor；Memory 焦点 → 滚屏；其他 no-op
+        (KeyCode::Up, _) => arrow(app, -1),
+        (KeyCode::Down, _) => arrow(app, 1),
+        (KeyCode::PageUp, _) => arrow(app, -10),
+        (KeyCode::PageDown, _) => arrow(app, 10),
+        (KeyCode::Home, _) if app.focus() == FocusPane::Source => {
+            app.cursor_to_line(1);
+        }
+        (KeyCode::End, _) if app.focus() == FocusPane::Source => {
+            let total = app.source_text().lines().count() as u32;
+            app.cursor_to_line(total);
+        }
         (KeyCode::Char('e'), KeyModifiers::NONE) => {
             let file = app.file().clone();
             editor::launch_editor(&file)?;
-            // 编辑器退出后无论成功失败都重载源码
             if let Err(err) = app.reload() {
                 tracing::warn!("reload failed: {err}");
             }
@@ -70,12 +98,10 @@ fn handle_control(ev: KeyEvent, app: &mut App) -> Result<()> {
     Ok(())
 }
 
-fn scroll_focus(app: &mut App, lines: i32) {
+fn arrow(app: &mut App, lines: i32) {
     match app.focus() {
-        FocusPane::Source => app.scroll_source(lines),
+        FocusPane::Source => app.move_cursor(lines),
         FocusPane::Memory => app.scroll_memory(lines * 16),
-        // Console 焦点不会走到这里（mode 已切到 Input）
-        // Registers 不滚动
         _ => {}
     }
 }

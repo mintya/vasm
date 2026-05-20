@@ -4,7 +4,7 @@ use crate::asm::ast::{Instruction, Program};
 use crate::asm::diagnostics::Span;
 use crate::vm::i8086::cpu::Cpu;
 use crate::vm::i8086::isa;
-use crate::vm::i8086::loader::{self, LoadError, LoadedProgram, SegmentLayout};
+use crate::vm::i8086::loader::{self, InstrSlot, LoadError, LoadedProgram, SegmentLayout};
 use crate::vm::i8086::memory::{MemError, Memory};
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -133,6 +133,13 @@ impl Vm {
             .iter()
             .find(|s| s.ip_offset == self.cpu.ip)
             .map(|s| &s.instr)
+    }
+
+    /// 当前 cs:ip 对应的 InstrSlot（含 ip_offset、size、span）。
+    /// 用于 App 层 step-over / 调用栈维护。
+    pub fn current_slot(&self) -> Option<&InstrSlot> {
+        let seg = self.find_segment_by_paragraph(self.cpu.cs)?;
+        seg.instructions.iter().find(|s| s.ip_offset == self.cpu.ip)
     }
 
     pub fn segment_for(&self, name: &str) -> Option<&SegmentLayout> {

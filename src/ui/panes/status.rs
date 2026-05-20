@@ -8,6 +8,7 @@ use crate::app::{App, FocusPane, InputMode, RunStatus};
 
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let (status_label, status_style) = match app.status() {
+        RunStatus::Paused => ("● Paused", Style::default().fg(Color::Yellow)),
         RunStatus::Halted => ("● Halted", Style::default().fg(Color::Green)),
         RunStatus::Error(_) => ("● Error", Style::default().fg(Color::Red)),
     };

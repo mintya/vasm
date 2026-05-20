@@ -80,4 +80,7 @@ pub fn render(frame: &mut Frame, app: &App) {
     panes::memory::render(rows[2], buf, app);
     panes::explain::render(rows[3], buf, app);
     panes::keymap::render(rows[4], buf, app);
+
+    // 最后渲染 Prompt popup（如有），覆盖在最上层
+    panes::prompt::render(full, buf, app);
 }
