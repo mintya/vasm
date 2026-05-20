@@ -15,4 +15,13 @@ pub struct Cli {
     /// Simulated memory size in KiB (max 1024)
     #[arg(long, default_value_t = 1024)]
     pub mem_kb: u32,
+
+    /// Run to completion in headless mode (no TUI) and print final CPU state.
+    /// Developer-only switch used to validate VM behaviour from the command line.
+    #[arg(long, hide = true)]
+    pub run: bool,
+
+    /// Maximum number of instructions to execute when `--run` is set.
+    #[arg(long, default_value_t = 1_000_000)]
+    pub max_steps: u64,
 }
