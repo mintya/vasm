@@ -1,0 +1,263 @@
+---
+source: tests/parser_snapshot.rs
+expression: parsed
+---
+(
+    Program {
+        segments: [
+            Segment {
+                name: "data",
+                items: [
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "msg",
+                            ),
+                            size: Byte,
+                            values: [
+                                String(
+                                    [
+                                        112,
+                                        114,
+                                        101,
+                                        115,
+                                        115,
+                                        32,
+                                        97,
+                                        110,
+                                        121,
+                                        32,
+                                        107,
+                                        101,
+                                        121,
+                                        36,
+                                    ],
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 3,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 2,
+                    col: 1,
+                    len: 4,
+                },
+            },
+            Segment {
+                name: "code",
+                items: [
+                    Assume(
+                        [
+                            AssumeBinding {
+                                seg_reg: "cs",
+                                segment: "code",
+                            },
+                            AssumeBinding {
+                                seg_reg: "ds",
+                                segment: "data",
+                            },
+                        ],
+                        Span {
+                            line: 6,
+                            col: 5,
+                            len: 6,
+                        },
+                    ),
+                    Label(
+                        "start",
+                        Span {
+                            line: 7,
+                            col: 1,
+                            len: 5,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Ident(
+                                        "data",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 8,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ds",
+                                ),
+                                Reg(
+                                    "ax",
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 9,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ah",
+                                ),
+                                Imm(
+                                    Int(
+                                        9,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 10,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "dx",
+                                ),
+                                Imm(
+                                    Offset(
+                                        Ident(
+                                            "msg",
+                                        ),
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 11,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "int",
+                            operands: [
+                                Imm(
+                                    Int(
+                                        33,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 12,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ah",
+                                ),
+                                Imm(
+                                    Int(
+                                        1,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 13,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "int",
+                            operands: [
+                                Imm(
+                                    Int(
+                                        33,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 14,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ah",
+                                ),
+                                Imm(
+                                    Int(
+                                        76,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 15,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "int",
+                            operands: [
+                                Imm(
+                                    Int(
+                                        33,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 16,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 5,
+                    col: 1,
+                    len: 4,
+                },
+            },
+        ],
+        entry: Some(
+            "start",
+        ),
+    },
+    [],
+)

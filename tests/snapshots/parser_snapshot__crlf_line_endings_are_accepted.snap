@@ -1,0 +1,62 @@
+---
+source: tests/parser_snapshot.rs
+expression: parsed
+---
+(
+    Program {
+        segments: [
+            Segment {
+                name: "code",
+                items: [
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Int(
+                                        1,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 2,
+                            col: 3,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "add",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Int(
+                                        2,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 3,
+                            col: 3,
+                            len: 3,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 1,
+                    col: 1,
+                    len: 4,
+                },
+            },
+        ],
+        entry: None,
+    },
+    [],
+)

@@ -1,0 +1,472 @@
+---
+source: tests/parser_snapshot.rs
+expression: parsed
+---
+(
+    Program {
+        segments: [
+            Segment {
+                name: "code",
+                items: [
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: None,
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 3,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: Some(
+                                            "si",
+                                        ),
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 4,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: Some(
+                                            "di",
+                                        ),
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 5,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bp",
+                                        ),
+                                        index: Some(
+                                            "si",
+                                        ),
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 6,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bp",
+                                        ),
+                                        index: Some(
+                                            "di",
+                                        ),
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 7,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: None,
+                                        disp: Some(
+                                            Int(
+                                                5,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 8,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: Some(
+                                            "si",
+                                        ),
+                                        disp: Some(
+                                            Int(
+                                                5,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 9,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: None,
+                                        disp: Some(
+                                            Neg(
+                                                Int(
+                                                    3,
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 10,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: Some(
+                                            "si",
+                                        ),
+                                        disp: Some(
+                                            BinOp {
+                                                op: Add,
+                                                lhs: Neg(
+                                                    Int(
+                                                        2,
+                                                    ),
+                                                ),
+                                                rhs: Int(
+                                                    10,
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 11,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: Some(
+                                            "ds",
+                                        ),
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: None,
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 12,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: Some(
+                                            "es",
+                                        ),
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: Some(
+                                            "si",
+                                        ),
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 13,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: Some(
+                                            "ss",
+                                        ),
+                                        size: None,
+                                        base: Some(
+                                            "bp",
+                                        ),
+                                        index: None,
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 14,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: Some(
+                                            Byte,
+                                        ),
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: None,
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 15,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: Some(
+                                            "ds",
+                                        ),
+                                        size: Some(
+                                            Word,
+                                        ),
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: Some(
+                                            "si",
+                                        ),
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 16,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: Some(
+                                            Dword,
+                                        ),
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: None,
+                                        disp: Some(
+                                            Int(
+                                                5,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 17,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 2,
+                    col: 1,
+                    len: 4,
+                },
+            },
+        ],
+        entry: None,
+    },
+    [],
+)

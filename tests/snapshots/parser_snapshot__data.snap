@@ -1,0 +1,329 @@
+---
+source: tests/parser_snapshot.rs
+expression: parsed
+---
+(
+    Program {
+        segments: [
+            Segment {
+                name: "data",
+                items: [
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "a",
+                            ),
+                            size: Byte,
+                            values: [
+                                Expr(
+                                    Int(
+                                        1,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 3,
+                            col: 5,
+                            len: 1,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "b",
+                            ),
+                            size: Byte,
+                            values: [
+                                Expr(
+                                    Int(
+                                        1,
+                                    ),
+                                ),
+                                Expr(
+                                    Int(
+                                        2,
+                                    ),
+                                ),
+                                Expr(
+                                    Int(
+                                        3,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 4,
+                            col: 5,
+                            len: 1,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "c",
+                            ),
+                            size: Byte,
+                            values: [
+                                String(
+                                    [
+                                        65,
+                                    ],
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 5,
+                            col: 5,
+                            len: 1,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "s",
+                            ),
+                            size: Byte,
+                            values: [
+                                String(
+                                    [
+                                        104,
+                                        101,
+                                        108,
+                                        108,
+                                        111,
+                                        36,
+                                    ],
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 6,
+                            col: 5,
+                            len: 1,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "w",
+                            ),
+                            size: Word,
+                            values: [
+                                Expr(
+                                    Int(
+                                        4660,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 7,
+                            col: 5,
+                            len: 1,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "arr",
+                            ),
+                            size: Word,
+                            values: [
+                                Expr(
+                                    Int(
+                                        1,
+                                    ),
+                                ),
+                                Expr(
+                                    Int(
+                                        2,
+                                    ),
+                                ),
+                                Expr(
+                                    Int(
+                                        3,
+                                    ),
+                                ),
+                                Expr(
+                                    Int(
+                                        43707,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 8,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "big",
+                            ),
+                            size: Dword,
+                            values: [
+                                Expr(
+                                    Int(
+                                        305419896,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 9,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "pad",
+                            ),
+                            size: Byte,
+                            values: [
+                                Dup {
+                                    count: Int(
+                                        16,
+                                    ),
+                                    values: [
+                                        Expr(
+                                            Int(
+                                                0,
+                                            ),
+                                        ),
+                                    ],
+                                },
+                            ],
+                        },
+                        Span {
+                            line: 10,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "pad2",
+                            ),
+                            size: Byte,
+                            values: [
+                                Dup {
+                                    count: Int(
+                                        5,
+                                    ),
+                                    values: [
+                                        Expr(
+                                            Int(
+                                                1,
+                                            ),
+                                        ),
+                                        Expr(
+                                            Int(
+                                                2,
+                                            ),
+                                        ),
+                                        Expr(
+                                            Int(
+                                                3,
+                                            ),
+                                        ),
+                                    ],
+                                },
+                            ],
+                        },
+                        Span {
+                            line: 11,
+                            col: 5,
+                            len: 4,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "nested",
+                            ),
+                            size: Byte,
+                            values: [
+                                Dup {
+                                    count: Int(
+                                        3,
+                                    ),
+                                    values: [
+                                        Dup {
+                                            count: Int(
+                                                2,
+                                            ),
+                                            values: [
+                                                Expr(
+                                                    Int(
+                                                        255,
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        Span {
+                            line: 12,
+                            col: 5,
+                            len: 6,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "uninit",
+                            ),
+                            size: Word,
+                            values: [
+                                Uninit,
+                            ],
+                        },
+                        Span {
+                            line: 13,
+                            col: 5,
+                            len: 6,
+                        },
+                    ),
+                    DataDecl(
+                        DataDecl {
+                            name: Some(
+                                "uninit_arr",
+                            ),
+                            size: Byte,
+                            values: [
+                                Dup {
+                                    count: Int(
+                                        4,
+                                    ),
+                                    values: [
+                                        Uninit,
+                                    ],
+                                },
+                            ],
+                        },
+                        Span {
+                            line: 14,
+                            col: 5,
+                            len: 10,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 2,
+                    col: 1,
+                    len: 4,
+                },
+            },
+        ],
+        entry: None,
+    },
+    [],
+)

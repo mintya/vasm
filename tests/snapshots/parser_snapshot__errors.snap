@@ -1,0 +1,356 @@
+---
+source: tests/parser_snapshot.rs
+expression: parsed
+---
+(
+    Program {
+        segments: [
+            Segment {
+                name: "code",
+                items: [
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 3,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: Some(
+                                            "bx",
+                                        ),
+                                        index: None,
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 4,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: None,
+                                        index: Some(
+                                            "si",
+                                        ),
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 5,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Mem(
+                                    Mem {
+                                        seg_override: None,
+                                        size: None,
+                                        base: None,
+                                        index: None,
+                                        disp: None,
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 6,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "word",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "ptr",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 7,
+                            col: 5,
+                            len: 4,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Reg(
+                                    "bx",
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 8,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Int(
+                                        0,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 9,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    BinOp {
+                                        op: Add,
+                                        lhs: Int(
+                                            0,
+                                        ),
+                                        rhs: Int(
+                                            1,
+                                        ),
+                                    },
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 10,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 11,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Int(
+                                        0,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 12,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 2,
+                    col: 1,
+                    len: 4,
+                },
+            },
+        ],
+        entry: None,
+    },
+    [
+        Diagnostic {
+            severity: Error,
+            message: "invalid number `12xy`",
+            span: Span {
+                line: 9,
+                col: 13,
+                len: 4,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "unterminated string literal (newline inside)",
+            span: Span {
+                line: 12,
+                col: 13,
+                len: 33,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "expected expression, found `,`",
+            span: Span {
+                line: 3,
+                col: 12,
+                len: 1,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "expected end of line, found `,`",
+            span: Span {
+                line: 3,
+                col: 12,
+                len: 1,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "more than one base register in memory operand",
+            span: Span {
+                line: 4,
+                col: 17,
+                len: 2,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "more than one index register in memory operand",
+            span: Span {
+                line: 5,
+                col: 17,
+                len: 2,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "expected expression, found `]`",
+            span: Span {
+                line: 6,
+                col: 14,
+                len: 1,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "empty memory operand `[]`",
+            span: Span {
+                line: 6,
+                col: 14,
+                len: 1,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "expected end of line, found identifier `ax`",
+            span: Span {
+                line: 7,
+                col: 14,
+                len: 2,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "size override cannot apply to a register",
+            span: Span {
+                line: 8,
+                col: 13,
+                len: 4,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "multi-byte string `AB` not allowed in expression context",
+            span: Span {
+                line: 10,
+                col: 13,
+                len: 4,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "expected expression, found end of line",
+            span: Span {
+                line: 11,
+                col: 56,
+                len: 1,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "multi-byte string `oops        ; 未闭合字符串` not allowed in expression context",
+            span: Span {
+                line: 12,
+                col: 13,
+                len: 33,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "`ends` for `b` outside any segment",
+            span: Span {
+                line: 14,
+                col: 1,
+                len: 1,
+            },
+        },
+    ],
+)

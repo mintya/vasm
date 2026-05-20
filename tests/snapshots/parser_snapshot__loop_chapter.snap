@@ -1,0 +1,115 @@
+---
+source: tests/parser_snapshot.rs
+expression: parsed
+---
+(
+    Program {
+        segments: [
+            Segment {
+                name: "code",
+                items: [
+                    Label(
+                        "start",
+                        Span {
+                            line: 3,
+                            col: 1,
+                            len: 5,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "cx",
+                                ),
+                                Imm(
+                                    Int(
+                                        10,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 4,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Int(
+                                        0,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 5,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Label(
+                        "loop_top",
+                        Span {
+                            line: 6,
+                            col: 1,
+                            len: 8,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "add",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Reg(
+                                    "cx",
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 7,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "loop",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "loop_top",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 8,
+                            col: 5,
+                            len: 4,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 2,
+                    col: 1,
+                    len: 4,
+                },
+            },
+        ],
+        entry: Some(
+            "start",
+        ),
+    },
+    [],
+)

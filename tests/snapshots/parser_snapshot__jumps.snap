@@ -1,0 +1,388 @@
+---
+source: tests/parser_snapshot.rs
+expression: parsed
+---
+(
+    Program {
+        segments: [
+            Segment {
+                name: "code",
+                items: [
+                    Label(
+                        "start",
+                        Span {
+                            line: 3,
+                            col: 1,
+                            len: 5,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "mov",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Int(
+                                        1,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 4,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "cmp",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                                Imm(
+                                    Int(
+                                        0,
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 5,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "je",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "equal_label",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 6,
+                            col: 5,
+                            len: 2,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "jne",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "notequal_label",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 7,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "jg",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "greater_label",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 8,
+                            col: 5,
+                            len: 2,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "jl",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "less_label",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 9,
+                            col: 5,
+                            len: 2,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "ja",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "above_label",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 10,
+                            col: 5,
+                            len: 2,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "jb",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "below_label",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 11,
+                            col: 5,
+                            len: 2,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "jcxz",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "cxzero_label",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 12,
+                            col: 5,
+                            len: 4,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "jmp",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "short",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 13,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "jmp",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "near",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 14,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "call",
+                            operands: [
+                                Imm(
+                                    Ident(
+                                        "subproc",
+                                    ),
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 15,
+                            col: 5,
+                            len: 4,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "ret",
+                            operands: [],
+                        },
+                        Span {
+                            line: 16,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Label(
+                        "equal_label",
+                        Span {
+                            line: 17,
+                            col: 1,
+                            len: 11,
+                        },
+                    ),
+                    Label(
+                        "notequal_label",
+                        Span {
+                            line: 18,
+                            col: 1,
+                            len: 14,
+                        },
+                    ),
+                    Label(
+                        "greater_label",
+                        Span {
+                            line: 19,
+                            col: 1,
+                            len: 13,
+                        },
+                    ),
+                    Label(
+                        "less_label",
+                        Span {
+                            line: 20,
+                            col: 1,
+                            len: 10,
+                        },
+                    ),
+                    Label(
+                        "above_label",
+                        Span {
+                            line: 21,
+                            col: 1,
+                            len: 11,
+                        },
+                    ),
+                    Label(
+                        "below_label",
+                        Span {
+                            line: 22,
+                            col: 1,
+                            len: 11,
+                        },
+                    ),
+                    Label(
+                        "cxzero_label",
+                        Span {
+                            line: 23,
+                            col: 1,
+                            len: 12,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "nop",
+                            operands: [],
+                        },
+                        Span {
+                            line: 24,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Label(
+                        "subproc",
+                        Span {
+                            line: 25,
+                            col: 1,
+                            len: 7,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "push",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 26,
+                            col: 5,
+                            len: 4,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "pop",
+                            operands: [
+                                Reg(
+                                    "ax",
+                                ),
+                            ],
+                        },
+                        Span {
+                            line: 27,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                    Instruction(
+                        Instruction {
+                            mnemonic: "ret",
+                            operands: [],
+                        },
+                        Span {
+                            line: 28,
+                            col: 5,
+                            len: 3,
+                        },
+                    ),
+                ],
+                span: Span {
+                    line: 2,
+                    col: 1,
+                    len: 4,
+                },
+            },
+        ],
+        entry: Some(
+            "start",
+        ),
+    },
+    [
+        Diagnostic {
+            severity: Error,
+            message: "expected end of line, found identifier `start`",
+            span: Span {
+                line: 13,
+                col: 15,
+                len: 5,
+            },
+        },
+        Diagnostic {
+            severity: Error,
+            message: "expected end of line, found identifier `ptr`",
+            span: Span {
+                line: 14,
+                col: 14,
+                len: 3,
+            },
+        },
+    ],
+)

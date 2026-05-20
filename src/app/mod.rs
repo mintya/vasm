@@ -12,19 +12,22 @@ use crossterm::terminal::{
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 
+use crate::asm::ast::Program;
 use crate::cli::Cli;
 use crate::error::Result;
 use crate::ui;
 
 pub struct App {
     file: PathBuf,
+    program: Program,
     should_quit: bool,
 }
 
 impl App {
-    pub fn new(file: PathBuf) -> Self {
+    pub fn new(file: PathBuf, program: Program) -> Self {
         Self {
             file,
+            program,
             should_quit: false,
         }
     }
@@ -34,6 +37,10 @@ impl App {
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| self.file.to_string_lossy().into_owned())
+    }
+
+    pub fn program(&self) -> &Program {
+        &self.program
     }
 
     pub fn quit(&mut self) {
@@ -58,14 +65,14 @@ impl Drop for TerminalGuard {
     }
 }
 
-pub fn run(cli: Cli) -> Result<()> {
+pub fn run(cli: Cli, program: Program) -> Result<()> {
     install_panic_hook();
 
     let _guard = TerminalGuard::enter()?;
     let backend = CrosstermBackend::new(io::stdout());
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new(cli.file);
+    let mut app = App::new(cli.file, program);
 
     while !app.should_quit {
         terminal.draw(|f| ui::render(f, &app))?;
