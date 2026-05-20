@@ -52,17 +52,23 @@ pub fn render(frame: &mut Frame, app: &App) {
         .split(rows[1]);
 
     panes::source::render(main[0], buf, app);
-    panes::console::render(main[1], buf, app);
 
-    // 右栏 5 段：Registers / Segments / Flags / Stack / CallStack
+    // 中栏垂直切：Console(上) + CallStack(下)
+    let center = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+        .split(main[1]);
+    panes::console::render(center[0], buf, app);
+    panes::call_stack::render(center[1], buf, app);
+
+    // 右栏 4 段：Registers / Segments / Flags / Stack
     let right = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(6), // Registers
             Constraint::Length(4), // Segments
             Constraint::Length(3), // Flags
-            Constraint::Min(3),    // Stack
-            Constraint::Length(3), // Call Stack
+            Constraint::Min(4),    // Stack
         ])
         .split(main[2]);
 
@@ -70,7 +76,6 @@ pub fn render(frame: &mut Frame, app: &App) {
     panes::segments::render(right[1], buf, app);
     panes::flags::render(right[2], buf, app);
     panes::stack::render(right[3], buf, app);
-    panes::call_stack::render(right[4], buf, app);
 
     panes::memory::render(rows[2], buf, app);
     panes::explain::render(rows[3], buf, app);

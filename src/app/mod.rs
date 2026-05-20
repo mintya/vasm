@@ -58,6 +58,7 @@ pub struct App {
     memory_origin_seg: u16,
     memory_origin_off: u16,
     console_input_buf: Vec<u8>,
+    console_scroll: u16,
     should_quit: bool,
     max_steps: u64,
     mem_kb: u32,
@@ -82,6 +83,7 @@ impl App {
             memory_origin_seg: 0,
             memory_origin_off: 0,
             console_input_buf: Vec::new(),
+            console_scroll: 0,
             should_quit: false,
             max_steps,
             mem_kb,
@@ -230,6 +232,15 @@ impl App {
 
     pub fn push_console_input(&mut self, b: u8) {
         self.console_input_buf.push(b);
+    }
+
+    pub fn console_scroll(&self) -> u16 {
+        self.console_scroll
+    }
+
+    pub fn scroll_console(&mut self, delta: i32) {
+        let v = self.console_scroll as i32 + delta;
+        self.console_scroll = v.max(0) as u16;
     }
 
     pub fn quit(&mut self) {

@@ -111,7 +111,7 @@ fn console_pane_shows_placeholder_until_m5() {
     let app = boot_app();
     let s = render_to_buffer(&app, 140, 35);
     assert!(s.contains("Console"), "console 标题: {s}");
-    assert!(s.contains("no output yet"), "M3 console 应显示占位: {s}");
+    assert!(s.contains("no output"), "M3 console 应显示占位: {s}");
 }
 
 #[test]

@@ -27,6 +27,9 @@ fn handle_input(ev: KeyEvent, app: &mut App) -> Result<()> {
             // 退回控制模式：把焦点切到 Source（任何非 Console 焦点都行）
             app.set_focus(FocusPane::Source);
         }
+        // Console 滚动用 PgUp/PgDn，不入缓冲
+        KeyCode::PageUp => app.scroll_console(-5),
+        KeyCode::PageDown => app.scroll_console(5),
         KeyCode::Char(c) => {
             // ASCII 字节直接进缓冲；非 ASCII 转换为 UTF-8 字节
             let mut buf = [0u8; 4];
