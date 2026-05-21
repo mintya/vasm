@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
@@ -8,9 +8,13 @@ use crate::app::{App, FocusPane};
 use crate::ui::highlight::highlight_line;
 
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
-    let mut block = Block::default().title("Source [F1]").borders(Borders::ALL);
+    let theme = app.theme();
+    let mut block = Block::default()
+        .title("Source [F1]")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border));
     if app.focus() == FocusPane::Source {
-        block = block.border_style(Style::default().fg(Color::Cyan));
+        block = block.border_style(Style::default().fg(theme.border_focused));
     }
 
     let inner_rows = area.height.saturating_sub(2) as usize;
@@ -40,7 +44,9 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         spans.push(Span::styled(
             bp_marker.to_string(),
             if bp {
-                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(theme.source_breakpoint)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             },
@@ -50,10 +56,10 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
             format!("{pc_marker} {line_no:>width$} │ ", width = gutter_width),
             if is_pc {
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.source_pc)
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::DarkGray)
+                Style::default().fg(theme.muted)
             },
         ));
         spans.extend(highlight_line(src_lines[line_idx]));
@@ -61,7 +67,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         // cursor 行：在 Source 焦点时整行加 background 高亮
         let mut line = Line::from(spans);
         if is_cursor && app.focus() == FocusPane::Source {
-            line = line.style(Style::default().bg(Color::DarkGray));
+            line = line.style(Style::default().bg(theme.muted));
         }
         lines.push(line);
     }

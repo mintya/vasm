@@ -190,9 +190,11 @@ fn cycle_focus_round_trip() {
     app.cycle_focus(true);
     assert_eq!(app.focus(), FocusPane::Memory);
     app.cycle_focus(true);
+    assert_eq!(app.focus(), FocusPane::CallStack);
+    app.cycle_focus(true);
     assert_eq!(app.focus(), FocusPane::Source);
     app.cycle_focus(false);
-    assert_eq!(app.focus(), FocusPane::Memory);
+    assert_eq!(app.focus(), FocusPane::CallStack);
 }
 
 // ---------------- M4 新增 ----------------
@@ -297,7 +299,7 @@ fn call_stack_grows_after_call() {
     assert_eq!(app.call_stack().len(), 1);
     let s = render_to_buffer(&app, 140, 35);
     assert!(
-        s.contains("Call Stack (1)"),
+        s.contains("Call Stack [F4] (1)"),
         "call stack 标题应显示数量: {s}"
     );
 }
@@ -630,4 +632,64 @@ fn undo_to_breakpoint_stops_at_marked_phys() {
     app.undo_to_breakpoint();
     // ip 应回到断点（即第一条指令）
     assert_eq!(app.vm().unwrap().cpu.ip, 0, "undo_to_breakpoint 应回到入口");
+}
+
+// ---- M6 Stage C：指令元数据 + 主题 + 调用栈焦点 -----------------------------
+
+#[test]
+fn explain_pane_shows_insn_doc_summary() {
+    // mov 的 doc summary 应在 explain 行可见
+    let src = "code segment\nstart:\n  mov ax, 1234h\n  hlt\ncode ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    // 停在第一条 mov 处；TestBackend 每个 CJK 字宽占两 cell（第二 cell 空），
+    // 所以中文文本在渲染缓冲里字间会塞空格。用 ASCII 子串 "flags" 做断言更稳。
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("mov ax,"), "explain 应展示当前指令: {s}");
+    assert!(
+        s.contains("flags"),
+        "mov 的 doc summary 含 'flags' 关键词: {s}"
+    );
+    // 再 step：到 hlt 行
+    app.step_once();
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("▶ hlt"), "explain 应展示 hlt: {s}");
+}
+
+#[test]
+fn theme_default_keeps_dos_green() {
+    use vasm::theme::Theme;
+    let t = Theme::default();
+    // 验收：默认风格保持 M0-M5 视觉
+    assert_eq!(t.console_output, ratatui::style::Color::Green);
+    assert_eq!(t.status_paused, ratatui::style::Color::Yellow);
+}
+
+#[test]
+fn theme_toml_overrides_field() {
+    use vasm::theme::Theme;
+    let toml = "[theme]\nconsole_output = \"lightcyan\"\nborder = \"#102030\"\n";
+    let t = Theme::from_toml_str(toml);
+    assert_eq!(t.console_output, ratatui::style::Color::LightCyan);
+    assert_eq!(t.border, ratatui::style::Color::Rgb(0x10, 0x20, 0x30));
+    // 未覆盖的字段保留默认
+    assert_eq!(t.status_halted, ratatui::style::Color::Green);
+}
+
+#[test]
+fn call_stack_pane_is_in_focus_ring() {
+    // Tab 循环到 CallStack；CallStack 焦点下方向键滚动 call_stack
+    let mut app = boot_app_paused();
+    for _ in 0..4 {
+        app.cycle_focus(true);
+    }
+    assert_eq!(app.focus(), FocusPane::CallStack);
+    // 滚动 +3 后再读
+    app.scroll_call_stack(3);
+    assert_eq!(app.call_stack_scroll(), 3);
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("Call Stack [F4]"), "title 应含 [F4]: {s}");
+    assert!(
+        s.contains("focus=CallStack"),
+        "状态栏应显示 focus=CallStack: {s}"
+    );
 }

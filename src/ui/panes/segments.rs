@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
@@ -15,9 +15,13 @@ use crate::app::{App, FocusPane};
 /// es=0000  -
 /// ```
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
-    let mut block = Block::default().title(" Segments ").borders(Borders::ALL);
+    let theme = app.theme();
+    let mut block = Block::default()
+        .title(" Segments ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border));
     if app.focus() == FocusPane::Registers {
-        block = block.border_style(Style::default().fg(Color::Cyan));
+        block = block.border_style(Style::default().fg(theme.border_focused));
     }
 
     let lines = match app.vm() {
@@ -30,7 +34,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         }
         None => vec![Line::from(Span::styled(
             "(no vm)",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.muted),
         ))],
     };
 
@@ -38,20 +42,21 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
 }
 
 fn seg_line(name: &str, paragraph: u16, app: &App) -> Line<'static> {
+    let theme = app.theme();
     let label = segment_label(app, paragraph);
     Line::from(vec![
         Span::styled(
             format!("{name}="),
             Style::default()
-                .fg(Color::Gray)
+                .fg(theme.register_name)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
             format!("{paragraph:04X}"),
-            Style::default().fg(Color::White),
+            Style::default().fg(theme.register_value),
         ),
         Span::raw("  "),
-        Span::styled(label, Style::default().fg(Color::DarkGray)),
+        Span::styled(label, Style::default().fg(theme.muted)),
     ])
 }
 

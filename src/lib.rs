@@ -3,6 +3,7 @@ pub mod asm;
 pub mod cli;
 pub mod encoding;
 pub mod error;
+pub mod theme;
 pub mod trace;
 pub mod ui;
 pub mod vm;

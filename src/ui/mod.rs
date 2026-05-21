@@ -3,7 +3,7 @@ pub mod panes;
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{Block, Borders, Widget};
 
 use crate::app::App;
@@ -11,6 +11,7 @@ use crate::app::App;
 pub fn render(frame: &mut Frame, app: &App) {
     let full = frame.area();
     let buf = frame.buffer_mut();
+    let theme = app.theme();
 
     // 最外层圆角边框：标题居中显示文件名
     let title = format!(" VisualASM · {} ", app.file_display());
@@ -21,7 +22,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(
             Style::default()
-                .fg(Color::Blue)
+                .fg(theme.outer)
                 .add_modifier(Modifier::BOLD),
         );
     let area = outer.inner(full);

@@ -1,29 +1,44 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
 use crate::app::{App, FocusPane};
+use crate::theme::Theme;
 use crate::vm::i8086::memory::Memory;
 
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
+    let theme = app.theme();
     let mut block = Block::default()
         .title("Stack (ss:sp)")
-        .borders(Borders::ALL);
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border));
     if app.focus() == FocusPane::Registers {
-        block = block.border_style(Style::default().fg(Color::Cyan));
+        block = block.border_style(Style::default().fg(theme.border_focused));
     }
 
     let lines = match app.vm() {
-        Some(vm) => stack_lines(vm.cpu.ss, vm.cpu.sp, &vm.mem, area.height.saturating_sub(2)),
+        Some(vm) => stack_lines(
+            theme,
+            vm.cpu.ss,
+            vm.cpu.sp,
+            &vm.mem,
+            area.height.saturating_sub(2),
+        ),
         None => vec![Line::from("(no vm)")],
     };
 
     Paragraph::new(lines).block(block).render(area, buf);
 }
 
-fn stack_lines(ss: u16, sp: u16, mem: &Memory, max_lines: u16) -> Vec<Line<'static>> {
+fn stack_lines(
+    theme: &Theme,
+    ss: u16,
+    sp: u16,
+    mem: &Memory,
+    max_lines: u16,
+) -> Vec<Line<'static>> {
     // 上下各显示一半，sp 行高亮
     let half = (max_lines as i32 / 2).max(1);
     let total = max_lines.max(1) as i32;
@@ -45,7 +60,7 @@ fn stack_lines(ss: u16, sp: u16, mem: &Memory, max_lines: u16) -> Vec<Line<'stat
         let label = format!("{marker} {off_u16:04X}: {val_str}");
         let style = if delta == 0 {
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.source_pc)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()

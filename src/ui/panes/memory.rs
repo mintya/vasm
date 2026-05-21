@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Style};
+use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
@@ -11,11 +11,13 @@ const BYTES_PER_ROW: u16 = 16;
 
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let (seg, off) = app.memory_origin();
+    let theme = app.theme();
     let mut block = Block::default()
         .title(format!("Memory  {seg:04X}:{off:04X}"))
-        .borders(Borders::ALL);
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border));
     if app.focus() == FocusPane::Memory {
-        block = block.border_style(Style::default().fg(Color::Cyan));
+        block = block.border_style(Style::default().fg(theme.border_focused));
     }
 
     let inner_rows = area.height.saturating_sub(2);

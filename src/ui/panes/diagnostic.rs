@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph, Widget, Wrap};
 
@@ -11,6 +11,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let RunStatus::Error(msg) = app.status() else {
         return;
     };
+    let theme = app.theme();
 
     let w = (area.width as u32 * 70 / 100)
         .max(50)
@@ -31,26 +32,30 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let block = Block::default()
         .title(" ✘ Execution Error ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
-        .style(Style::default().bg(Color::Black));
+        .border_style(
+            Style::default()
+                .fg(theme.status_error)
+                .add_modifier(Modifier::BOLD),
+        )
+        .style(Style::default().bg(theme.console_bg));
 
     let lines = vec![
         Line::from(Span::styled(
             msg.clone(),
-            Style::default().fg(Color::Red).bg(Color::Black),
+            Style::default().fg(theme.status_error).bg(theme.console_bg),
         )),
         Line::default(),
         Line::from(Span::styled(
             "按 Enter 关闭弹窗（VM 状态保留以便检查）",
             Style::default()
-                .fg(Color::DarkGray)
-                .bg(Color::Black)
+                .fg(theme.muted)
+                .bg(theme.console_bg)
                 .add_modifier(Modifier::ITALIC),
         )),
     ];
     Paragraph::new(lines)
         .wrap(Wrap { trim: false })
         .block(block)
-        .style(Style::default().bg(Color::Black))
+        .style(Style::default().bg(theme.console_bg))
         .render(popup, buf);
 }

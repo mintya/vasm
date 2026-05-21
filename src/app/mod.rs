@@ -21,6 +21,7 @@ use crate::asm::parser;
 use crate::cli::Cli;
 use crate::encoding::Encoding;
 use crate::error::Result;
+use crate::theme::Theme;
 use crate::ui;
 use crate::vm::i8086::exec::{StepOutcome, StepSnapshot, Vm};
 use crate::vm::i8086::memory::Memory;
@@ -38,6 +39,7 @@ pub enum FocusPane {
     Console,
     Registers,
     Memory,
+    CallStack,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -123,6 +125,7 @@ pub struct App {
     last_watch_hit: Option<String>,
     breakpoints: HashSet<u32>, // 物理地址
     call_stack: Vec<CallFrame>,
+    call_stack_scroll: u16,
     prompt: Option<Prompt>,
     editor_pending: bool, // 主循环看到 true 后调起外部编辑器并清屏
     should_quit: bool,
@@ -130,6 +133,7 @@ pub struct App {
     mem_kb: u32,
     encoding: Encoding,
     disk: Option<Vec<u8>>,
+    theme: Theme,
 }
 
 impl App {
@@ -161,6 +165,7 @@ impl App {
             last_watch_hit: None,
             breakpoints: HashSet::new(),
             call_stack: Vec::new(),
+            call_stack_scroll: 0,
             prompt: None,
             editor_pending: false,
             should_quit: false,
@@ -168,6 +173,7 @@ impl App {
             mem_kb,
             encoding,
             disk,
+            theme: Theme::load_or_default(),
         };
         app.reboot_vm(program);
         app
@@ -732,11 +738,12 @@ impl App {
     }
 
     pub fn cycle_focus(&mut self, forward: bool) {
-        const RING: [FocusPane; 4] = [
+        const RING: [FocusPane; 5] = [
             FocusPane::Source,
             FocusPane::Console,
             FocusPane::Registers,
             FocusPane::Memory,
+            FocusPane::CallStack,
         ];
         let idx = RING.iter().position(|f| *f == self.focus).unwrap_or(0);
         let next = if forward {
@@ -773,6 +780,19 @@ impl App {
 
     pub fn console_scroll(&self) -> u16 {
         self.console_scroll
+    }
+
+    pub fn theme(&self) -> &Theme {
+        &self.theme
+    }
+
+    pub fn call_stack_scroll(&self) -> u16 {
+        self.call_stack_scroll
+    }
+
+    pub fn scroll_call_stack(&mut self, delta: i32) {
+        let v = self.call_stack_scroll as i32 + delta;
+        self.call_stack_scroll = v.max(0) as u16;
     }
 
     /// 当前 echo 视觉副本（已自动同步过——render 前应先调 `sync_echo`）。

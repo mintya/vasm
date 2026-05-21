@@ -110,6 +110,7 @@ fn handle_control(ev: KeyEvent, app: &mut App) -> Result<()> {
         (KeyCode::F(1), _) => app.set_focus(FocusPane::Source),
         (KeyCode::F(2), _) => app.set_focus(FocusPane::Console),
         (KeyCode::F(3), _) => app.set_focus(FocusPane::Registers),
+        (KeyCode::F(4), _) => app.set_focus(FocusPane::CallStack),
         // 调试控制
         (KeyCode::Char('s'), KeyModifiers::NONE) => app.step_once(),
         (KeyCode::Char('n'), KeyModifiers::NONE) => app.step_over(),
@@ -146,6 +147,7 @@ fn arrow(app: &mut App, lines: i32) {
     match app.focus() {
         FocusPane::Source => app.move_cursor(lines),
         FocusPane::Memory => app.scroll_memory(lines * 16),
+        FocusPane::CallStack => app.scroll_call_stack(lines),
         _ => {}
     }
 }

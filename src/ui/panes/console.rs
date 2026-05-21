@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
@@ -25,16 +25,17 @@ use crate::app::{App, EchoChar, FocusPane};
 /// - waiting 时 echo 行的 prompt 前缀变黄。
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let focused = app.focus() == FocusPane::Console;
+    let theme = app.theme();
     let border_style = Style::default().fg(if focused {
-        Color::Yellow
+        theme.console_echo
     } else {
-        Color::DarkGray
+        theme.muted
     });
     let block = Block::default()
         .title(" Console [F2] ")
         .borders(Borders::ALL)
         .border_style(border_style)
-        .style(Style::default().bg(Color::Black));
+        .style(Style::default().bg(theme.console_bg));
 
     // 先 render 边框，再在 inner area 拆上下区
     let inner = block.inner(area);
@@ -50,7 +51,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         .split(inner);
 
     render_output(chunks[0], buf, app);
-    render_separator(chunks[1], buf);
+    render_separator(chunks[1], buf, app);
     render_echo_line(chunks[2], buf, app);
 }
 
@@ -60,6 +61,7 @@ fn render_output(area: Rect, buf: &mut Buffer, app: &App) {
         None => (Vec::new(), false),
     };
     let encoding = app.encoding();
+    let theme = app.theme();
 
     let mut grid = TerminalGrid::new();
     let decoded = encoding.decode(&output_bytes);
@@ -67,10 +69,16 @@ fn render_output(area: Rect, buf: &mut Buffer, app: &App) {
         grid.put(ch);
     }
 
-    let output_style = Style::default().fg(Color::Green).bg(Color::Black);
+    let output_style = Style::default()
+        .fg(theme.console_output)
+        .bg(theme.console_bg);
     let cursor_style = Style::default()
-        .fg(if waiting { Color::Yellow } else { Color::Green })
-        .bg(Color::Black)
+        .fg(if waiting {
+            theme.console_echo
+        } else {
+            theme.console_output
+        })
+        .bg(theme.console_bg)
         .add_modifier(Modifier::SLOW_BLINK);
 
     let mut lines = grid.into_lines(output_style);
@@ -81,21 +89,22 @@ fn render_output(area: Rect, buf: &mut Buffer, app: &App) {
         .push(Span::styled("█", cursor_style));
 
     Paragraph::new(lines)
-        .style(Style::default().bg(Color::Black))
+        .style(Style::default().bg(theme.console_bg))
         .scroll((app.console_scroll(), 0))
         .render(area, buf);
 }
 
-fn render_separator(area: Rect, buf: &mut Buffer) {
+fn render_separator(area: Rect, buf: &mut Buffer, app: &App) {
     if area.height == 0 {
         return;
     }
+    let theme = app.theme();
     let line = Line::from(Span::styled(
         "─".repeat(area.width as usize),
-        Style::default().fg(Color::DarkGray).bg(Color::Black),
+        Style::default().fg(theme.muted).bg(theme.console_bg),
     ));
     Paragraph::new(line)
-        .style(Style::default().bg(Color::Black))
+        .style(Style::default().bg(theme.console_bg))
         .render(area, buf);
 }
 
@@ -104,18 +113,19 @@ fn render_echo_line(area: Rect, buf: &mut Buffer, app: &App) {
         .vm()
         .map(|vm| vm.console.waiting_for_input())
         .unwrap_or(false);
+    let theme = app.theme();
 
     let prompt_style = Style::default()
         .fg(if waiting {
-            Color::Yellow
+            theme.console_echo
         } else {
-            Color::DarkGray
+            theme.muted
         })
-        .bg(Color::Black)
+        .bg(theme.console_bg)
         .add_modifier(Modifier::BOLD);
     let echo_style = Style::default()
-        .fg(Color::Cyan)
-        .bg(Color::Black)
+        .fg(theme.console_cursor)
+        .bg(theme.console_bg)
         .add_modifier(Modifier::BOLD);
 
     // 拼 echo 字符串：每个 EchoChar 一段；超长时右截断保留尾部
@@ -132,7 +142,7 @@ fn render_echo_line(area: Rect, buf: &mut Buffer, app: &App) {
         Span::styled(visible, echo_style),
     ]);
     Paragraph::new(line)
-        .style(Style::default().bg(Color::Black))
+        .style(Style::default().bg(theme.console_bg))
         .render(area, buf);
 }
 

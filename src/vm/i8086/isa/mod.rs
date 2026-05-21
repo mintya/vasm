@@ -1,6 +1,7 @@
 pub mod arith;
 pub mod control;
 pub mod data_move;
+pub mod doc;
 pub mod flags;
 pub mod intr;
 pub mod io;

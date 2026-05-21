@@ -1,12 +1,13 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Paragraph, Widget};
 
 use crate::app::{App, FocusPane, InputMode, RunStatus};
 
 pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
+    let theme = app.theme();
     let waiting_input = app
         .vm()
         .map(|vm| vm.console.waiting_for_input())
@@ -14,11 +15,11 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
     let (status_label, status_style) = match app.status() {
         RunStatus::Paused if waiting_input => (
             "● Paused (waiting input)",
-            Style::default().fg(Color::Magenta),
+            Style::default().fg(theme.status_waiting),
         ),
-        RunStatus::Paused => ("● Paused", Style::default().fg(Color::Yellow)),
-        RunStatus::Halted => ("● Halted", Style::default().fg(Color::Green)),
-        RunStatus::Error(_) => ("● Error", Style::default().fg(Color::Red)),
+        RunStatus::Paused => ("● Paused", Style::default().fg(theme.status_paused)),
+        RunStatus::Halted => ("● Halted", Style::default().fg(theme.status_halted)),
+        RunStatus::Error(_) => ("● Error", Style::default().fg(theme.status_error)),
     };
 
     let cs_ip = match app.vm() {
@@ -31,6 +32,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         FocusPane::Console => "Console",
         FocusPane::Registers => "Registers",
         FocusPane::Memory => "Memory",
+        FocusPane::CallStack => "CallStack",
     };
 
     let mode_name = match app.mode() {
@@ -49,7 +51,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         spans.push(Span::raw(": "));
         spans.push(Span::styled(
             truncate_msg(msg, 60),
-            Style::default().fg(Color::Red),
+            Style::default().fg(theme.status_error),
         ));
     }
     spans.extend([
@@ -68,7 +70,7 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         spans.push(Span::raw("  "));
         spans.push(Span::styled(
             format!("watches={watch_count}"),
-            Style::default().fg(Color::Magenta),
+            Style::default().fg(theme.status_waiting),
         ));
     }
     if let Some(hit) = app.last_watch_hit() {
@@ -76,15 +78,15 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
         spans.push(Span::styled(
             format!("watch! {hit}"),
             Style::default()
-                .fg(Color::Magenta)
+                .fg(theme.status_waiting)
                 .add_modifier(Modifier::BOLD),
         ));
     }
     spans.extend([
         Span::raw("  focus="),
-        Span::styled(focus_name, Style::default().fg(Color::Cyan)),
+        Span::styled(focus_name, Style::default().fg(theme.border)),
         Span::raw("  mode="),
-        Span::styled(mode_name, Style::default().fg(Color::Yellow)),
+        Span::styled(mode_name, Style::default().fg(theme.status_paused)),
     ]);
 
     Paragraph::new(Line::from(spans)).render(area, buf);
