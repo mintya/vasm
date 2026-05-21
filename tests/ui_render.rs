@@ -693,3 +693,31 @@ fn call_stack_pane_is_in_focus_ring() {
         "状态栏应显示 focus=CallStack: {s}"
     );
 }
+
+/// 生成 README 用的 ASCII 截图。手动运行：
+/// `cargo test --test ui_render readme_screenshot -- --ignored --nocapture`
+#[test]
+#[ignore]
+fn readme_screenshot() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .join("ch05_sum_loop.asm");
+    let src = std::fs::read_to_string(&path).expect("read fixture");
+    let (program, diags) = parser::parse(&src);
+    assert!(diags.is_empty(), "{diags:?}");
+    let mut app = App::boot(
+        path,
+        src,
+        program,
+        1024,
+        10_000,
+        vasm::encoding::Encoding::Utf8,
+        None,
+    );
+    // 单步 8 次：跑过 mov ax/cx/bx + 几次 loop 体，让寄存器与 ip 都有内容
+    for _ in 0..8 {
+        app.step_once();
+    }
+    let s = render_to_buffer(&app, 110, 28);
+    print!("\n{s}\n");
+}
