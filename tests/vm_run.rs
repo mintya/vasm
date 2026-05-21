@@ -22,14 +22,14 @@ fn run_fixture(name: &str) -> Vm {
 
 #[test]
 fn sum_loop_1_to_10_equals_55() {
-    let vm = run_fixture("m2_sum_loop.asm");
+    let vm = run_fixture("ch05_sum_loop.asm");
     assert_eq!(vm.cpu.ax, 55);
     assert_eq!(vm.cpu.cx, 0);
 }
 
 #[test]
 fn multi_segment_loads_segments_and_array_sum() {
-    let vm = run_fixture("m2_multi_segment.asm");
+    let vm = run_fixture("ch06_multi_segment.asm");
     let data_seg = vm.program.segments["data"].base_paragraph;
     let stack_seg = vm.program.segments["stack"].base_paragraph;
     assert_eq!(vm.cpu.ds, data_seg);
@@ -397,14 +397,14 @@ fn in_unsupported_port_returns_error() {
 
 #[test]
 fn m5_hello_fixture_writes_string_to_console() {
-    let vm = run_fixture("m5_hello.asm");
+    let vm = run_fixture("ch13_hello.asm");
     assert_eq!(vm.console.output(), b"Hello, world!");
     assert!(vm.halted());
 }
 
 #[test]
 fn m5_bios_video_fixture_repeats_char() {
-    let vm = run_fixture("m5_bios_video.asm");
+    let vm = run_fixture("ch13_bios_video.asm");
     assert_eq!(vm.console.output(), b"********************");
     assert!(vm.halted());
 }
@@ -480,7 +480,7 @@ fn dos_0ah_buffered_input_truncates_at_capacity() {
 
 #[test]
 fn m6_jump_table_fixture_calls_correct_handler() {
-    let vm = run_fixture("m6_jump_table.asm");
+    let vm = run_fixture("ch16_jump_table.asm");
     // table[1] = h1 → ax = 200
     assert_eq!(vm.cpu.ax, 200);
 }
@@ -624,4 +624,72 @@ fn step_with_snapshot_records_console_output_len() {
     let (_, snap) = vm.step_with_snapshot().unwrap();
     assert_eq!(snap.console_output_len_before, len_before);
     assert!(vm.console.output_len() > len_before, "int 21h 应输出字符");
+}
+
+// ---- M7：章节化 fixture 自检 -------------------------------------------
+
+#[test]
+fn ch02_first_mov_register_arith() {
+    let vm = run_fixture("ch02_first_mov.asm");
+    assert_eq!(vm.cpu.ax, 0x0009);
+    assert_eq!(vm.cpu.bx, 0x0003);
+}
+
+#[test]
+fn ch03_mem_access_reads_byte() {
+    let vm = run_fixture("ch03_mem_access.asm");
+    assert_eq!(vm.cpu.r8(vasm::vm::i8086::cpu::Reg8::Al), b'A');
+    assert_eq!(vm.cpu.r8(vasm::vm::i8086::cpu::Reg8::Ah), b'B');
+}
+
+#[test]
+fn ch04_first_program_runs_to_halt() {
+    let vm = run_fixture("ch04_first_program.asm");
+    assert_eq!(vm.cpu.ax, 10);
+    assert!(vm.halted());
+}
+
+#[test]
+fn ch07_addressing_picks_grid_cell() {
+    let vm = run_fixture("ch07_addressing.asm");
+    assert_eq!(vm.cpu.r8(vasm::vm::i8086::cpu::Reg8::Al), b'G');
+}
+
+#[test]
+fn ch08_data_dup_to_lower() {
+    let vm = run_fixture("ch08_data_dup.asm");
+    // 取数据段前 5 字节应都是小写
+    let ds = vm.cpu.ds;
+    for (i, expected) in b"hello".iter().enumerate() {
+        let b = vm
+            .mem
+            .read_u8(Memory::phys(ds, i as u16))
+            .expect("data bytes");
+        assert_eq!(b, *expected, "byte {i}");
+    }
+    assert_eq!(vm.cpu.r8(vasm::vm::i8086::cpu::Reg8::Al), b'h');
+}
+
+#[test]
+fn ch12_int_div_zero_raises_error() {
+    // 不走 run_fixture（它 expect("run")），需要捕获错误
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .join("ch12_int_div_zero.asm");
+    let src = std::fs::read_to_string(&path).expect("read fixture");
+    let mut vm = boot_str(&src);
+    let err = vm.run_until_halt(100).unwrap_err();
+    assert!(matches!(err, VmError::DivideByZero { .. }));
+}
+
+#[test]
+fn ch14_port_in_reads_input_byte() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .join("ch14_port_in.asm");
+    let src = std::fs::read_to_string(&path).expect("read fixture");
+    let mut vm = boot_str(&src);
+    vm.console.push_input(0x1E); // 'A' 的扫描码
+    vm.run_until_halt(100).unwrap();
+    assert_eq!(vm.cpu.r8(vasm::vm::i8086::cpu::Reg8::Al), 0x1E);
 }

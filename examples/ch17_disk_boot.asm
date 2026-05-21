@@ -1,6 +1,6 @@
-; M6 fixture：教材 §17 启动扇区读取。
+; 教材 §17 fixture：启动扇区读取。
 ; 用 int 13h ah=02h 把磁盘扇区 0（CHS = 0,0,1）读到 0:7C00（DOS 启动扇区惯例）。
-; 配合 --disk 1.44MB 镜像跑：cargo run -- --disk floppy.img examples/m6_disk_boot.asm
+; 配合 --disk 1.44MB 镜像跑：cargo run -- --disk floppy.img examples/ch17_disk_boot.asm
 code segment
     assume cs:code
 start:
