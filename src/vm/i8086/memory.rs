@@ -9,16 +9,33 @@ pub enum MemError {
 #[derive(Debug, Clone)]
 pub struct Memory {
     bytes: Vec<u8>,
+    /// undo 用：开启后，write_u8 会把每个被覆盖位置的 (addr, 旧值) 追加到这里。
+    /// `Vm::step_with_snapshot` 在 step 前 `start_recording()`，结束后
+    /// `take_recording()` 收集进 Snapshot。
+    recording: Option<Vec<(u32, u8)>>,
 }
 
 impl Memory {
     pub fn new(size_kb: u32) -> Self {
         let bytes = vec![0u8; (size_kb as usize) * 1024];
-        Self { bytes }
+        Self {
+            bytes,
+            recording: None,
+        }
     }
 
     pub fn size(&self) -> u32 {
         self.bytes.len() as u32
+    }
+
+    /// 开始记录所有 write_u8 的 (addr, 旧值)。
+    pub fn start_recording(&mut self) {
+        self.recording = Some(Vec::new());
+    }
+
+    /// 取走累计的写入记录并停止记录。
+    pub fn take_recording(&mut self) -> Vec<(u32, u8)> {
+        self.recording.take().unwrap_or_default()
     }
 
     /// 8086 物理地址：seg * 16 + off
@@ -38,7 +55,11 @@ impl Memory {
             .bytes
             .get_mut(addr as usize)
             .ok_or(MemError::OutOfBounds { addr, size: 1 })?;
+        let old = *slot;
         *slot = v;
+        if let Some(rec) = self.recording.as_mut() {
+            rec.push((addr, old));
+        }
         Ok(())
     }
 
@@ -65,7 +86,8 @@ impl Memory {
         Ok(())
     }
 
-    /// 批量写入（数据段加载用）。
+    /// 批量写入（数据段加载用）。注意：**不走 recording**——仅供 boot 时
+    /// 加载数据段使用，不在 step 期间调用。
     pub fn write_bytes(&mut self, addr: u32, data: &[u8]) -> Result<(), MemError> {
         let end = (addr as usize)
             .checked_add(data.len())
@@ -137,5 +159,20 @@ mod tests {
         mem.write_bytes(0x10, &[1, 2, 3, 4]).unwrap();
         assert_eq!(mem.read_u8(0x10).unwrap(), 1);
         assert_eq!(mem.read_u8(0x13).unwrap(), 4);
+    }
+
+    #[test]
+    fn write_recording_captures_old_values() {
+        let mut mem = Memory::new(1);
+        mem.write_u8(0x10, 0xAA).unwrap();
+        // 启动录制 → 后续 write 应捕获 (addr, old)
+        mem.start_recording();
+        mem.write_u8(0x10, 0xBB).unwrap();
+        mem.write_u8(0x11, 0xCC).unwrap();
+        let rec = mem.take_recording();
+        assert_eq!(rec, vec![(0x10, 0xAA), (0x11, 0x00)]);
+        // 停止后再写不再记录
+        mem.write_u8(0x12, 0xDD).unwrap();
+        assert!(mem.take_recording().is_empty());
     }
 }

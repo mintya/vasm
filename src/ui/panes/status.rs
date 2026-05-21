@@ -62,6 +62,25 @@ pub fn render(area: Rect, buf: &mut Buffer, app: &App) {
             "#int={}",
             app.vm().map(|vm| vm.console.interrupts()).unwrap_or(0)
         )),
+    ]);
+    let watch_count = app.watches().len();
+    if watch_count > 0 {
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled(
+            format!("watches={watch_count}"),
+            Style::default().fg(Color::Magenta),
+        ));
+    }
+    if let Some(hit) = app.last_watch_hit() {
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled(
+            format!("watch! {hit}"),
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
+    spans.extend([
         Span::raw("  focus="),
         Span::styled(focus_name, Style::default().fg(Color::Cyan)),
         Span::raw("  mode="),

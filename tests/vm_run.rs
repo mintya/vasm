@@ -580,3 +580,48 @@ fn int16_ah_11_behaves_like_01() {
     vm.run_until_halt(100).unwrap();
     assert!(vm.cpu.flags.zf, "ah=11 空缓冲时 ZF=1");
 }
+
+// ---- M6 Stage B：undo + watchpoint -------------------------------------
+
+#[test]
+fn step_with_snapshot_captures_cpu_before() {
+    let mut vm =
+        boot_str("code segment\n  mov ax, 1234h\n  mov bx, 5678h\n  hlt\ncode ends\nend\n");
+    let cpu0 = vm.cpu;
+    let (_, snap) = vm.step_with_snapshot().unwrap();
+    assert_eq!(snap.cpu_before, cpu0, "snapshot 应是 step 前的 cpu");
+    assert_ne!(vm.cpu.ax, snap.cpu_before.ax, "step 后 ax 已变");
+}
+
+#[test]
+fn step_with_snapshot_records_memory_diffs() {
+    // push 一字到栈段：栈段被写了 2 字节
+    let mut vm = boot_str(
+        "stk segment\n  db 16 dup (0)\nstk ends\n\
+         code segment\n  mov ax, stk\n  mov ss, ax\n  mov sp, 16\n  \
+         mov ax, 0BEEFh\n  push ax\n  hlt\ncode ends\nend\n",
+    );
+    // 跑到 push 之前
+    for _ in 0..4 {
+        vm.step().unwrap();
+    }
+    let (_, snap) = vm.step_with_snapshot().unwrap();
+    // push 写了 2 字节（u16 = lo + hi）→ mem_diffs 含 2 项 (addr, 旧值=0)
+    assert_eq!(snap.mem_diffs.len(), 2);
+    for (_, old) in &snap.mem_diffs {
+        assert_eq!(*old, 0);
+    }
+}
+
+#[test]
+fn step_with_snapshot_records_console_output_len() {
+    let mut vm =
+        boot_str("code segment\n  mov dl, 'X'\n  mov ah, 2\n  int 21h\n  hlt\ncode ends\nend\n");
+    // 走到 int 21h 之前
+    vm.step().unwrap(); // mov dl
+    vm.step().unwrap(); // mov ah
+    let len_before = vm.console.output_len();
+    let (_, snap) = vm.step_with_snapshot().unwrap();
+    assert_eq!(snap.console_output_len_before, len_before);
+    assert!(vm.console.output_len() > len_before, "int 21h 应输出字符");
+}

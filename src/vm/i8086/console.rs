@@ -34,12 +34,37 @@ impl ConsoleIo {
         &self.output
     }
 
+    /// undo 用：返回当前 output 长度，回退时可以 `truncate_output` 到这个长度。
+    pub fn output_len(&self) -> usize {
+        self.output.len()
+    }
+
+    /// undo 用：把 output 截到指定长度（用于回退 stub 的 push_output）。
+    pub fn truncate_output(&mut self, len: usize) {
+        self.output.truncate(len);
+    }
+
+    /// undo 用：用旧 input 队列覆盖当前 input。
+    pub fn restore_input(&mut self, bytes: Vec<u8>) {
+        self.input = bytes.into();
+    }
+
+    /// undo 用：返回 input 当前快照。
+    pub fn snapshot_input(&self) -> Vec<u8> {
+        self.input.iter().copied().collect()
+    }
+
     pub fn clear_output(&mut self) {
         self.output.clear();
     }
 
     pub fn push_input(&mut self, byte: u8) {
         self.input.push_back(byte);
+    }
+
+    /// undo 用：把字节插回输入队头（恢复 pop_input 消费过的字节）。
+    pub fn push_input_front(&mut self, byte: u8) {
+        self.input.push_front(byte);
     }
 
     pub fn pop_input(&mut self) -> Option<u8> {

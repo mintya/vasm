@@ -53,6 +53,23 @@ pub enum StepOutcome {
     WaitingForInput,
 }
 
+/// step 一条指令期间的状态快照——用于 undo。
+///
+/// 字段：
+/// - `cpu_before`：step 前的 Cpu 完整副本（Copy）
+/// - `mem_diffs`：step 期间被覆盖的 (addr, 旧值)，回退时按相反顺序写回
+/// - `console_output_len_before`：step 前 console.output 长度，回退时 truncate
+/// - `console_input_before`：step 前 console.input 完整快照，回退时直接覆盖
+/// - `halted_before`：step 前 halted 标志
+#[derive(Debug, Clone)]
+pub struct StepSnapshot {
+    pub cpu_before: Cpu,
+    pub mem_diffs: Vec<(u32, u8)>,
+    pub console_output_len_before: usize,
+    pub console_input_before: Vec<u8>,
+    pub halted_before: bool,
+}
+
 pub struct Vm {
     pub cpu: Cpu,
     pub mem: Memory,
@@ -97,12 +114,59 @@ impl Vm {
         self.halted = true;
     }
 
+    /// undo 用：显式重置 halted 标志。
+    pub fn set_halted(&mut self, v: bool) {
+        self.halted = v;
+    }
+
     /// 用于 isa 实现：跳转指令显式设置 ip。
     pub fn set_ip(&mut self, new_ip: u16) {
         self.cpu.ip = new_ip;
     }
 
     pub fn step(&mut self) -> Result<StepOutcome, VmError> {
+        self.step_impl(false).map(|(o, _)| o)
+    }
+
+    /// 与 step 一样执行一条指令，但额外返回一个 `StepSnapshot` 用于 undo。
+    /// 即便 step 返回 `WaitingForInput` 或 `Halted`，snapshot 仍有效（撤销后可继续）。
+    pub fn step_with_snapshot(&mut self) -> Result<(StepOutcome, StepSnapshot), VmError> {
+        self.step_impl(true)
+            .map(|(o, s)| (o, s.expect("requested")))
+    }
+
+    fn step_impl(&mut self, record: bool) -> Result<(StepOutcome, Option<StepSnapshot>), VmError> {
+        // step 前：抓快照（如果需要）
+        let mut snap = if record {
+            let s = StepSnapshot {
+                cpu_before: self.cpu,
+                mem_diffs: Vec::new(),
+                console_output_len_before: self.console.output_len(),
+                console_input_before: self.console.snapshot_input(),
+                halted_before: self.halted,
+            };
+            self.mem.start_recording();
+            Some(s)
+        } else {
+            None
+        };
+
+        let outcome_res = self.step_inner();
+
+        // 不管 inner 成功或失败，都先把 recording 收回，避免泄漏到下一次 step
+        let diffs = if record {
+            self.mem.take_recording()
+        } else {
+            Vec::new()
+        };
+        if let Some(s) = snap.as_mut() {
+            s.mem_diffs = diffs;
+        }
+
+        outcome_res.map(|outcome| (outcome, snap))
+    }
+
+    fn step_inner(&mut self) -> Result<StepOutcome, VmError> {
         if self.halted {
             return Ok(StepOutcome::Halted);
         }

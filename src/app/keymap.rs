@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-use crate::app::{App, FocusPane, InputMode, PromptKind};
+use crate::app::{App, FocusPane, InputMode, PromptKind, RunStatus};
 use crate::error::Result;
 
 pub fn handle(ev: KeyEvent, app: &mut App) -> Result<()> {
@@ -14,7 +14,15 @@ pub fn handle(ev: KeyEvent, app: &mut App) -> Result<()> {
         return Ok(());
     }
 
-    // Prompt 模式优先级最高
+    // 诊断浮层（Error）：拦截 Enter 关闭；其他键吞掉避免误操作
+    if matches!(app.status(), RunStatus::Error(_)) {
+        if ev.code == KeyCode::Enter || ev.code == KeyCode::Esc {
+            app.dismiss_error();
+        }
+        return Ok(());
+    }
+
+    // Prompt 模式优先级次之
     if app.prompt().is_some() {
         return handle_prompt(ev, app);
     }
@@ -109,6 +117,10 @@ fn handle_control(ev: KeyEvent, app: &mut App) -> Result<()> {
         (KeyCode::Char('b'), KeyModifiers::NONE) => app.toggle_breakpoint_at_cursor(),
         (KeyCode::Char('r'), KeyModifiers::NONE) => app.reset(),
         (KeyCode::Char('g'), KeyModifiers::NONE) => app.open_prompt(PromptKind::Goto),
+        (KeyCode::Char('u'), KeyModifiers::NONE) => app.undo(),
+        (KeyCode::Char('U'), KeyModifiers::SHIFT) => app.undo_to_breakpoint(),
+        (KeyCode::Char('w'), KeyModifiers::NONE) => app.open_prompt(PromptKind::AddWatch),
+        (KeyCode::Char('W'), KeyModifiers::SHIFT) => app.clear_watches(),
         // 方向键：Source 焦点 → 移 cursor；Memory 焦点 → 滚屏；其他 no-op
         (KeyCode::Up, _) => arrow(app, -1),
         (KeyCode::Down, _) => arrow(app, 1),

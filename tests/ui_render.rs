@@ -495,3 +495,139 @@ fn console_pane_handles_output_crlf_and_backspace() {
     // 第二行：C 被 \b X 覆盖成 X
     assert!(s.contains("X"), "第二行 X 可见: {s}");
 }
+
+// ---- M6 Stage B：undo + watchpoint + 诊断浮层 -----------------------------
+
+#[test]
+fn undo_restores_cpu_and_steps_counter() {
+    // 单步两次后 undo 一次，ax 与 #steps 应回退
+    let src = "code segment\n  mov ax, 1\n  mov ax, 2\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    app.step_once();
+    app.step_once();
+    let steps_after = app.steps_executed();
+    let ax_after = app.vm().unwrap().cpu.ax;
+    assert_eq!(ax_after, 2);
+    app.undo();
+    assert_eq!(app.steps_executed(), steps_after - 1);
+    assert_eq!(app.vm().unwrap().cpu.ax, 1, "undo 后 ax 应回到第一步后的值");
+}
+
+#[test]
+fn undo_restores_memory_writes() {
+    let src = "data segment\n  buf db 4 dup (0)\ndata ends\n\
+               code segment\n  assume cs:code, ds:data\nstart:\n  \
+               mov ax, data\n  mov ds, ax\n  mov byte ptr ds:[0], 42h\n  hlt\n\
+               code ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    // 跑到 mov byte ptr ds:[0], 42h 之后
+    for _ in 0..3 {
+        app.step_once();
+    }
+    use vasm::vm::i8086::memory::Memory;
+    let ds = app.vm().unwrap().cpu.ds;
+    let phys = Memory::phys(ds, 0);
+    assert_eq!(app.vm().unwrap().mem.read_u8(phys).unwrap(), 0x42);
+    app.undo();
+    assert_eq!(
+        app.vm().unwrap().mem.read_u8(phys).unwrap(),
+        0,
+        "undo 后字节回到 0"
+    );
+}
+
+#[test]
+fn watch_hits_when_register_changes() {
+    let src = "code segment\n  mov ax, 1\n  mov ax, 2\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    app.add_watch("ax").unwrap();
+    assert!(app.last_watch_hit().is_none());
+    app.step_once(); // mov ax, 1 → ax 从 0 变 1
+    assert!(app.last_watch_hit().is_some(), "ax 变化应命中 watch");
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("watch!"), "status 应显示 watch 命中: {s}");
+    assert!(s.contains("watches=1"), "status 应显示 watch 计数: {s}");
+}
+
+#[test]
+fn diagnostic_modal_shown_on_error() {
+    // 触发未实现指令错误，浮层应展示
+    let src = "code segment\n  lea ax, [bx]\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    app.step_once();
+    assert!(matches!(app.status(), vasm::app::RunStatus::Error(_)));
+    let s = render_to_buffer(&app, 140, 35);
+    assert!(s.contains("Execution Error"), "诊断浮层应可见: {s}");
+    app.dismiss_error();
+    assert!(matches!(app.status(), vasm::app::RunStatus::Paused));
+}
+
+#[test]
+fn undo_restores_console_output() {
+    // mov dl,'X' / mov ah,2 / int 21h 之后 console.output = "X"；undo 一步后输出应清空。
+    let src = "code segment\nstart:\n  mov dl, 'X'\n  mov ah, 2\n  int 21h\n  hlt\ncode ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    // step 到 int 21h 之后
+    for _ in 0..3 {
+        app.step_once();
+    }
+    assert_eq!(app.vm().unwrap().console.output(), b"X");
+    app.undo();
+    assert!(
+        app.vm().unwrap().console.output().is_empty(),
+        "undo 后 console output 应回到 int 21h 之前"
+    );
+}
+
+#[test]
+fn watch_on_memory_address_hits_on_write() {
+    // 观察一段数据地址；写入后 watch 命中
+    let src = "data segment\n  buf db 4 dup (0)\ndata ends\n\
+               code segment\n  assume cs:code, ds:data\nstart:\n  \
+               mov ax, data\n  mov ds, ax\n  mov byte ptr ds:[0], 99h\n  hlt\n\
+               code ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    // 先 step 让 ds 设好，再加 watch
+    app.step_once(); // mov ax, data
+    app.step_once(); // mov ds, ax
+    let ds = app.vm().unwrap().cpu.ds;
+    let phys = vasm::vm::i8086::memory::Memory::phys(ds, 0);
+    app.add_watch(&format!("{phys:X}")).unwrap();
+    assert!(app.last_watch_hit().is_none());
+    app.step_once(); // mov byte ptr ds:[0], 99h
+    assert!(
+        app.last_watch_hit().is_some(),
+        "内存 watch 应在写入后命中: {:?}",
+        app.last_watch_hit()
+    );
+}
+
+#[test]
+fn clear_watches_removes_all() {
+    let src = "code segment\n  mov ax, 1\n  hlt\ncode ends\nend\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    app.add_watch("ax").unwrap();
+    app.add_watch("bx").unwrap();
+    assert_eq!(app.watches().len(), 2);
+    app.clear_watches();
+    assert_eq!(app.watches().len(), 0);
+    assert!(app.last_watch_hit().is_none());
+}
+
+#[test]
+fn undo_to_breakpoint_stops_at_marked_phys() {
+    // 在第一条指令处设断点，往后单步若干次，再 U 回到断点位置
+    let src = "code segment\nstart:\n  mov ax, 1\n  mov ax, 2\n  mov ax, 3\n  hlt\ncode ends\nend start\n";
+    let mut app = boot_with_src(src, vasm::encoding::Encoding::Utf8);
+    app.cursor_to_line(3); // mov ax,1
+    app.toggle_breakpoint_at_cursor();
+    assert!(!app.breakpoints().is_empty(), "断点应已设");
+    // 跨过断点，单步 3 次
+    for _ in 0..3 {
+        app.step_once();
+    }
+    assert_eq!(app.vm().unwrap().cpu.ax, 3);
+    app.undo_to_breakpoint();
+    // ip 应回到断点（即第一条指令）
+    assert_eq!(app.vm().unwrap().cpu.ip, 0, "undo_to_breakpoint 应回到入口");
+}

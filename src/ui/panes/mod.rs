@@ -1,5 +1,6 @@
 pub mod call_stack;
 pub mod console;
+pub mod diagnostic;
 pub mod explain;
 pub mod flags;
 pub mod keymap;

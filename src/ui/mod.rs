@@ -83,4 +83,6 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     // 最后渲染 Prompt popup（如有），覆盖在最上层
     panes::prompt::render(full, buf, app);
+    // 诊断浮层（Error 状态时显示，覆盖在最上层）
+    panes::diagnostic::render(full, buf, app);
 }
