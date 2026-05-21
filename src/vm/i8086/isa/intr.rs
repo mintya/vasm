@@ -31,6 +31,7 @@ pub fn int_(vm: &mut Vm, ops: &[Operand], span: Span) -> Result<(), VmError> {
     match n {
         0x21 => dos::int21(vm, span),
         0x10 => bios::int10(vm, span),
+        0x13 => bios::int13(vm, span),
         0x16 => bios::int16(vm, span),
         _ => dispatch_vector(vm, n, span),
     }

@@ -22,6 +22,10 @@ pub struct Cli {
     #[arg(long, value_enum, default_value_t = Encoding::Gbk)]
     pub encoding: Encoding,
 
+    /// Path to a virtual 1.44MB floppy image for int 13h disk reads/writes.
+    #[arg(long)]
+    pub disk: Option<PathBuf>,
+
     /// Run to completion in headless mode (no TUI) and print final CPU state.
     /// Developer-only switch used to validate VM behaviour from the command line.
     #[arg(long, hide = true)]

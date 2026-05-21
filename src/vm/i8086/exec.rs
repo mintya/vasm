@@ -38,6 +38,8 @@ pub enum VmError {
     UnsupportedPort { port: u16, span: Span },
     #[error("waiting for console input in headless mode")]
     WaitingForInputHeadless,
+    #[error("disk i/o error: {reason}")]
+    DiskIo { reason: String, span: Span },
     #[error(transparent)]
     Mem(#[from] MemError),
     #[error(transparent)]
@@ -56,11 +58,22 @@ pub struct Vm {
     pub mem: Memory,
     pub program: LoadedProgram,
     pub console: ConsoleIo,
+    /// 虚拟软盘（可选）。教材 §17 启动扇区程序通过 int 13h ah=02h 读这里。
+    /// 约定 1.44MB 软盘：2 heads × 80 cyl × 18 spt × 512 = 1_474_560 字节。
+    pub disk: Option<Vec<u8>>,
     halted: bool,
 }
 
 impl Vm {
     pub fn boot(program: Program, mem_kb: u32) -> Result<Self, VmError> {
+        Self::boot_with_disk(program, mem_kb, None)
+    }
+
+    pub fn boot_with_disk(
+        program: Program,
+        mem_kb: u32,
+        disk: Option<Vec<u8>>,
+    ) -> Result<Self, VmError> {
         let (loaded, memory) = loader::load(&program, mem_kb, loader::DEFAULT_START_PARAGRAPH)?;
         let mut cpu = Cpu::new();
         let (cs, ip) = loaded.entry.clone().ok_or(VmError::EntryRequired)?;
@@ -71,6 +84,7 @@ impl Vm {
             mem: memory,
             program: loaded,
             console: ConsoleIo::new(),
+            disk,
             halted: false,
         })
     }

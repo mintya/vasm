@@ -18,6 +18,7 @@ fn boot_app() -> App {
         1024,
         10_000,
         vasm::encoding::Encoding::Utf8,
+        None,
     );
     // M4 起 boot 后默认 Paused 在入口；显式跑到终态以测试 M3 期待的终态显示。
     app.run_continue();
@@ -39,6 +40,7 @@ fn boot_app_paused() -> App {
         1024,
         10_000,
         vasm::encoding::Encoding::Utf8,
+        None,
     )
 }
 
@@ -285,6 +287,7 @@ fn call_stack_grows_after_call() {
         1024,
         10_000,
         vasm::encoding::Encoding::Utf8,
+        None,
     );
     // step 直到 call 之后
     for _ in 0..5 {
@@ -312,6 +315,7 @@ fn halted_pc_points_to_hlt_not_following_instr() {
         1024,
         100,
         vasm::encoding::Encoding::Utf8,
+        None,
     );
     app.run_continue();
     assert!(matches!(app.status(), RunStatus::Halted));
@@ -335,6 +339,7 @@ fn boot_with_src(src: &str, encoding: vasm::encoding::Encoding) -> App {
         1024,
         100_000,
         encoding,
+        None,
     )
 }
 

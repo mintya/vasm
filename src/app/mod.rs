@@ -105,6 +105,7 @@ pub struct App {
     max_steps: u64,
     mem_kb: u32,
     encoding: Encoding,
+    disk: Option<Vec<u8>>,
 }
 
 impl App {
@@ -115,6 +116,7 @@ impl App {
         mem_kb: u32,
         max_steps: u64,
         encoding: Encoding,
+        disk: Option<Vec<u8>>,
     ) -> Self {
         let mut app = Self {
             file,
@@ -138,6 +140,7 @@ impl App {
             max_steps,
             mem_kb,
             encoding,
+            disk,
         };
         app.reboot_vm(program);
         app
@@ -149,7 +152,7 @@ impl App {
         self.console_scroll = 0;
         self.console_echo.clear();
         self.call_stack.clear();
-        match Vm::boot(program, self.mem_kb) {
+        match Vm::boot_with_disk(program, self.mem_kb, self.disk.clone()) {
             Ok(vm) => {
                 self.memory_origin_seg = vm.cpu.ds;
                 self.memory_origin_off = 0;
@@ -713,7 +716,7 @@ impl Drop for TerminalGuard {
     }
 }
 
-pub fn run(cli: Cli, program: Program) -> Result<()> {
+pub fn run(cli: Cli, program: Program, disk: Option<Vec<u8>>) -> Result<()> {
     install_panic_hook();
 
     let source_text = fs::read_to_string(&cli.file)?;
@@ -724,6 +727,7 @@ pub fn run(cli: Cli, program: Program) -> Result<()> {
         cli.mem_kb,
         cli.max_steps,
         cli.encoding,
+        disk,
     );
 
     let _guard = TerminalGuard::enter()?;

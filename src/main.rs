@@ -39,7 +39,9 @@ fn main() -> Result<()> {
     }
 
     if cli.run {
-        let mut vm = Vm::boot(program, cli.mem_kb).map_err(|e| anyhow::anyhow!("{e}"))?;
+        let disk = load_disk(&cli)?;
+        let mut vm =
+            Vm::boot_with_disk(program, cli.mem_kb, disk).map_err(|e| anyhow::anyhow!("{e}"))?;
         vm.run_until_halt(cli.max_steps)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         print_state(&vm);
@@ -50,7 +52,15 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    vasm::app::run(cli, program)
+    let disk = load_disk(&cli)?;
+    vasm::app::run(cli, program, disk)
+}
+
+fn load_disk(cli: &Cli) -> Result<Option<Vec<u8>>> {
+    match &cli.disk {
+        Some(path) => Ok(Some(std::fs::read(path)?)),
+        None => Ok(None),
+    }
 }
 
 fn print_state(vm: &Vm) {

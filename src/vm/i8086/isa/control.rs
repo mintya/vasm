@@ -1,8 +1,8 @@
-use crate::asm::ast::Operand;
+use crate::asm::ast::{DataSize, Operand};
 use crate::asm::diagnostics::Span;
 use crate::vm::i8086::cpu::Flags;
 use crate::vm::i8086::exec::{Vm, VmError};
-use crate::vm::i8086::isa::operand::{OpSize, read_operand};
+use crate::vm::i8086::isa::operand::{OpSize, effective_address, read_operand};
 use crate::vm::i8086::memory::Memory;
 
 pub fn loop_(vm: &mut Vm, ops: &[Operand], span: Span) -> Result<(), VmError> {
@@ -26,7 +26,9 @@ pub fn nop() -> Result<(), VmError> {
 }
 
 /// `jmp short/near label`：同段跳转。`jmp far ptr seg:off`：跨段。
-/// `jmp word ptr ds:[...]` 等间接跳转留到 M6。
+/// `jmp word ptr ds:[...]`：近间接（取 word 当 ip）。
+/// `jmp dword ptr ds:[...]`：远间接（取 dword 当 cs:ip）。
+/// `jmp reg`：跳到寄存器值。
 pub fn jmp(vm: &mut Vm, ops: &[Operand], span: Span) -> Result<(), VmError> {
     expect_one(ops, "jmp", span)?;
     match &ops[0] {
@@ -40,14 +42,27 @@ pub fn jmp(vm: &mut Vm, ops: &[Operand], span: Span) -> Result<(), VmError> {
             vm.set_ip(target);
             Ok(())
         }
-        Operand::Mem(_) => Err(VmError::UnsupportedInstruction {
-            mnemonic: "jmp <mem>".into(),
-            span,
-        }),
-        Operand::Reg(_) => Err(VmError::InvalidOperand {
-            reason: "jmp 目标不能是寄存器（M6 才支持 jmp reg 间接跳转）".into(),
-            span,
-        }),
+        Operand::Mem(m) => {
+            let (seg, off) = effective_address(vm, m, span)?;
+            let phys = Memory::phys(seg, off);
+            if m.size == Some(DataSize::Dword) {
+                let new_ip = vm.mem.read_u16(phys)?;
+                let new_cs = vm.mem.read_u16(phys.wrapping_add(2))?;
+                vm.cpu.cs = new_cs;
+                vm.set_ip(new_ip);
+            } else {
+                // 默认 / `word ptr`：近间接
+                let new_ip = vm.mem.read_u16(phys)?;
+                vm.set_ip(new_ip);
+            }
+            Ok(())
+        }
+        Operand::Reg(_) => {
+            // jmp reg：跳到 reg 当前值（必须是 16 位寄存器；8 位由 read_operand 拒绝）
+            let target = read_operand(vm, &ops[0], OpSize::Word, span)?;
+            vm.set_ip(target);
+            Ok(())
+        }
     }
 }
 
@@ -99,6 +114,9 @@ fn jcc_condition(mnemonic: &str, f: &Flags) -> Option<bool> {
 
 /// `call near label` → push next_ip, ip = target
 /// `call far seg:off` → push cs, push ip, set cs:ip
+/// `call word ptr ds:[...]` → 近间接（取 word 当 ip）
+/// `call dword ptr ds:[...]` → 远间接（取 dword 当 cs:ip）
+/// `call reg` → 跳到 reg 值
 pub fn call(vm: &mut Vm, ops: &[Operand], span: Span) -> Result<(), VmError> {
     expect_one(ops, "call", span)?;
     match &ops[0] {
@@ -115,14 +133,29 @@ pub fn call(vm: &mut Vm, ops: &[Operand], span: Span) -> Result<(), VmError> {
             vm.set_ip(target);
             Ok(())
         }
-        Operand::Mem(_) => Err(VmError::UnsupportedInstruction {
-            mnemonic: "call <mem>".into(),
-            span,
-        }),
-        Operand::Reg(_) => Err(VmError::InvalidOperand {
-            reason: "call 不接受寄存器目标".into(),
-            span,
-        }),
+        Operand::Mem(m) => {
+            let (seg, off) = effective_address(vm, m, span)?;
+            let phys = Memory::phys(seg, off);
+            if m.size == Some(DataSize::Dword) {
+                let new_ip = vm.mem.read_u16(phys)?;
+                let new_cs = vm.mem.read_u16(phys.wrapping_add(2))?;
+                push_word(vm, vm.cpu.cs, span)?;
+                push_word(vm, vm.cpu.ip, span)?;
+                vm.cpu.cs = new_cs;
+                vm.set_ip(new_ip);
+            } else {
+                let new_ip = vm.mem.read_u16(phys)?;
+                push_word(vm, vm.cpu.ip, span)?;
+                vm.set_ip(new_ip);
+            }
+            Ok(())
+        }
+        Operand::Reg(_) => {
+            let target = read_operand(vm, &ops[0], OpSize::Word, span)?;
+            push_word(vm, vm.cpu.ip, span)?;
+            vm.set_ip(target);
+            Ok(())
+        }
     }
 }
 

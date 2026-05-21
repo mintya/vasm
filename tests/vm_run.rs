@@ -475,3 +475,108 @@ fn dos_0ah_buffered_input_truncates_at_capacity() {
     assert_eq!(vm.mem.read_u8(Memory::phys(ds, 3)).unwrap(), b'b');
     assert_eq!(vm.mem.read_u8(Memory::phys(ds, 4)).unwrap(), b'c');
 }
+
+// ---- M6 Stage A：间接跳转 + 磁盘 ----------------------------------------
+
+#[test]
+fn m6_jump_table_fixture_calls_correct_handler() {
+    let vm = run_fixture("m6_jump_table.asm");
+    // table[1] = h1 → ax = 200
+    assert_eq!(vm.cpu.ax, 200);
+}
+
+#[test]
+fn jmp_word_ptr_near_indirect() {
+    let mut vm = boot_str(
+        "data segment\n  tbl dw target\ndata ends\n\
+         code segment\n  assume cs:code, ds:data\nstart:\n  \
+         mov ax, data\n  mov ds, ax\n  mov bx, 0\n  \
+         jmp word ptr ds:[bx + offset tbl]\n  \
+         mov ax, 1\n  hlt\n\
+         target:\n  mov ax, 0FACEh\n  hlt\n\
+         code ends\nend start\n",
+    );
+    vm.run_until_halt(1000).unwrap();
+    assert_eq!(vm.cpu.ax, 0xFACE);
+}
+
+#[test]
+fn call_word_ptr_indirect_pushes_return_ip() {
+    let mut vm = boot_str(
+        "data segment\n  tbl dw sub_routine\ndata ends\n\
+         stack segment\n  db 32 dup (0)\nstack ends\n\
+         code segment\n  assume cs:code, ds:data, ss:stack\nstart:\n  \
+         mov ax, stack\n  mov ss, ax\n  mov sp, 32\n  \
+         mov ax, data\n  mov ds, ax\n  mov bx, 0\n  \
+         call word ptr ds:[bx + offset tbl]\n  \
+         mov ax, 0BEEFh\n  hlt\n\
+         sub_routine:\n  mov cx, 1234h\n  ret\n\
+         code ends\nend start\n",
+    );
+    vm.run_until_halt(1000).unwrap();
+    assert_eq!(vm.cpu.cx, 0x1234, "sub_routine 跑过");
+    assert_eq!(vm.cpu.ax, 0xBEEF, "ret 后回到 mov ax, 0BEEFh");
+    assert_eq!(vm.cpu.sp, 32, "栈对称");
+}
+
+#[test]
+fn jmp_reg_indirect() {
+    let mut vm = boot_str(
+        "code segment\nstart:\n  mov ax, offset target\n  jmp ax\n  \
+         mov bx, 1\n  hlt\n\
+         target:\n  mov bx, 0DEADh\n  hlt\n\
+         code ends\nend start\n",
+    );
+    vm.run_until_halt(1000).unwrap();
+    assert_eq!(vm.cpu.bx, 0xDEAD);
+}
+
+#[test]
+fn int13_read_sector_writes_to_es_bx() {
+    let mut vm = boot_str(
+        "code segment\nstart:\n  \
+         mov ax, 07C0h\n  mov es, ax\n  mov bx, 0\n  \
+         mov ah, 2\n  mov al, 1\n  mov ch, 0\n  mov cl, 1\n  mov dh, 0\n  mov dl, 0\n  \
+         int 13h\n  hlt\ncode ends\nend start\n",
+    );
+    // 准备一张磁盘：扇区 0 的前 8 字节填 "BOOTSECT"
+    let mut disk = vec![0u8; 1_474_560];
+    disk[..8].copy_from_slice(b"BOOTSECT");
+    vm.disk = Some(disk);
+
+    vm.run_until_halt(1000).unwrap();
+    assert_eq!(vm.cpu.r8(vasm::vm::i8086::cpu::Reg8::Ah), 0, "AH=0 表成功");
+    assert!(!vm.cpu.flags.cf, "CF=0 表成功");
+    // 读到的字节应在 07C0:0000 = 0x7C00
+    use vasm::vm::i8086::memory::Memory;
+    for (i, b) in b"BOOTSECT".iter().enumerate() {
+        let v = vm.mem.read_u8(Memory::phys(0x07C0, i as u16)).unwrap();
+        assert_eq!(v, *b, "byte {i}");
+    }
+}
+
+#[test]
+fn int13_without_disk_returns_error() {
+    let mut vm = boot_str(
+        "code segment\n  mov ah, 2\n  mov al, 1\n  mov ch, 0\n  mov cl, 1\n  \
+         mov dh, 0\n  mov dl, 0\n  int 13h\n  hlt\ncode ends\nend\n",
+    );
+    let err = vm.run_until_halt(100).unwrap_err();
+    assert!(matches!(err, VmError::DiskIo { .. }));
+}
+
+#[test]
+fn int16_ah_02_returns_zero_flags_byte() {
+    let mut vm = boot_str("code segment\n  mov ah, 2\n  int 16h\n  hlt\ncode ends\nend\n");
+    vm.run_until_halt(100).unwrap();
+    use vasm::vm::i8086::cpu::Reg8;
+    assert_eq!(vm.cpu.r8(Reg8::Al), 0, "教学场景修饰键状态恒 0");
+}
+
+#[test]
+fn int16_ah_11_behaves_like_01() {
+    let mut vm = boot_str("code segment\n  mov ah, 11h\n  int 16h\n  hlt\ncode ends\nend\n");
+    // 空缓冲：ZF=1
+    vm.run_until_halt(100).unwrap();
+    assert!(vm.cpu.flags.zf, "ah=11 空缓冲时 ZF=1");
+}
