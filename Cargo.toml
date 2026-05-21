@@ -2,10 +2,18 @@
 name = "vasm"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
+description = "Visualize 8086 assembly execution in your terminal"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/mintya/vasm"
+readme = "README.md"
+keywords = ["assembly", "8086", "tui", "education", "debugger"]
+categories = ["command-line-utilities", "development-tools::debugging"]
+authors = ["mintya"]
 
 [dependencies]
-ratatui = "0.29"
-crossterm = "0.28"
+ratatui = "0.30"
+crossterm = "0.29"
 clap = { version = "4.5", features = ["derive"] }
 anyhow = "1"
 thiserror = "2"
@@ -13,8 +21,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 encoding_rs = "0.8"
 serde = { version = "1", features = ["derive"] }
-toml = "0.8"
-dirs = "5"
+toml = "1.1.2"
+dirs = "6.0.0"
 
 [dev-dependencies]
 insta = "1"
