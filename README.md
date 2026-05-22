@@ -11,8 +11,6 @@
 [![GitHub release](https://img.shields.io/github/v/release/mintya/vasm?include_prereleases&sort=semver)](https://github.com/mintya/vasm/releases/latest)
 [![CI](https://github.com/mintya/vasm/actions/workflows/ci.yml/badge.svg)](https://github.com/mintya/vasm/actions/workflows/ci.yml)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mintya/vasm/release.yml)
-
-
 ![GitHub stars](https://img.shields.io/github/stars/mintya/vasm)
 ![GitHub forks](https://img.shields.io/github/forks/mintya/vasm) 
 
@@ -222,7 +220,6 @@ src/
 └── theme.rs     # 可外配主题
 ```
 
-主要设计决策见 [`docs/conventions.md`](docs/conventions.md) 与 [`docs/plan.md`](docs/plan.md)。
 
 ## 当前局限
 
