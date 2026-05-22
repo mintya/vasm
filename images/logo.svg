@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VisualASM logo">
+  <!-- 圆角正方形：奶白底，细黑线一圈 -->
+  <rect x="5" y="5" width="246" height="246"
+        rx="34" ry="34"
+        fill="#F2EFE7" stroke="#0A0A0A" stroke-width="2.2"/>
+
+  <!-- 内侧极淡高光，模拟液晶面板反光膜 -->
+  <rect x="13" y="13" width="230" height="230"
+        rx="28" ry="28"
+        fill="none" stroke="#FFFFFF" stroke-width="0.8" opacity="0.55"/>
+
+  <!-- 立体 V：单条 chevron 路径勾出"双线 + 顶端短横 + 底端实心交汇"的轮廓
+       底层 #4A3D1F 偏移 5px 做阴影；上层 #13161B 主体；linejoin miter 出锐角 -->
+  <g stroke-linejoin="miter" stroke-miterlimit="6">
+    <!-- 阴影层（向右下偏移 5px，偏暗的褐黑） -->
+    <path d="M 65,65 L 133,205 L 201,65 L 177,65 L 133,156 L 89,65 Z"
+          fill="#4A3D1F" opacity="0.85"/>
+    <!-- 主体（深近黑，仿点亮液晶段） -->
+    <path d="M 60,60 L 128,200 L 196,60 L 172,60 L 128,151 L 84,60 Z"
+          fill="#13161B"/>
+  </g>
+
+  <!-- 右下角 "asm"：每个字符纯线条手搓，CLI / 段式风
+       栅格：每字 14×16，字间隔 4，起点 (194,216)，stroke 2.2 -->
+  <g stroke="#13161B" stroke-width="2.2"
+     fill="none"
+     stroke-linecap="square" stroke-linejoin="miter">
+    <!-- a：等腰三角形 + 中横 -->
+    <polyline points="194,232 201,216 208,232"/>
+    <line x1="196.5" y1="225" x2="205.5" y2="225"/>
+
+    <!-- s：5 段 Z 字 -->
+    <polyline points="226,217 212,217 212,223 226,223 226,231 212,231"/>
+
+    <!-- m：左竖 + 顶心 V + 右竖 -->
+    <polyline points="230,232 230,216 237,222 244,216 244,232"/>
+  </g>
+</svg>

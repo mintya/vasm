@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="images/logo.svg" alt="VisualASM logo" width="140" height="140">
+
 # VisualASM
 
 > 在终端里直观看见 8086 汇编程序每一条指令的效果。
@@ -8,6 +10,13 @@
 [![docs.rs](https://docs.rs/vasm/badge.svg)](https://docs.rs/vasm)
 [![GitHub release](https://img.shields.io/github/v/release/mintya/vasm?include_prereleases&sort=semver)](https://github.com/mintya/vasm/releases/latest)
 [![CI](https://github.com/mintya/vasm/actions/workflows/ci.yml/badge.svg)](https://github.com/mintya/vasm/actions/workflows/ci.yml)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/mintya/vasm/release.yml)
+
+
+![GitHub stars](https://img.shields.io/github/stars/mintya/vasm)
+![GitHub forks](https://img.shields.io/github/forks/mintya/vasm) 
+
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 [![License](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-blue.svg)](#license)
 
 </div>
@@ -48,7 +57,9 @@ VisualASM 是一个跨平台的教学型 8086 实模式汇编 TUI 调试器，�
 │[s]单步 [n]步过 [c]继续 [b]断点 [u]撤销 [w]watch [r]复位 [g]跳转 [Tab]焦点 [e]编辑 [q]退出                       │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
+
 </div>
+
 ## 安装
 
 ```bash
@@ -223,3 +234,6 @@ src/
 ## License
 
 MIT OR Apache-2.0 —— 下游可任选其一。详见 [`LICENSE-MIT`](LICENSE-MIT) 与 [`LICENSE-APACHE`](LICENSE-APACHE)。
+
+## Stargazers over time
+[![Stargazers over time](https://starchart.cc/mintya/vasm.svg?variant=adaptive)](https://starchart.cc/mintya/vasm)
