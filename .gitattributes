@@ -1,0 +1,25 @@
+# 默认按内容判断 + 提交时归一化（防混合换行）
+* text=auto
+
+# 源码与配置：所有平台一律 LF
+# parser_snapshot 测试基于字节级 col/len，CRLF 会让 Windows 上多算 1
+*.rs    text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.asm   text eol=lf
+*.snap  text eol=lf
+*.txt   text eol=lf
+
+# SVG 是文本，但 PNG/JPG 是二进制，避免被 CRLF 篡改
+*.svg   text eol=lf
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+
+# Windows 批处理脚本要 CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
